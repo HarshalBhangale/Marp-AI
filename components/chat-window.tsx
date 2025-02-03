@@ -25,7 +25,7 @@ export function ChatWindow() {
                   <span className="font-semibold">AI Assistant</span>
                   <span className="text-sm text-muted-foreground">10:56:57</span>
                 </div>
-                <p>Hello! I'm your AI financial assistant. How can I help you today?</p>
+                <p>Hello! I&#39;m Marp. The ETH AI Rockstar</p>
               </div>
             </div>
           </Card>

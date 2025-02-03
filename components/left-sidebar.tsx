@@ -5,7 +5,8 @@ import { MessageCircle, Library, BarChart2, History, Settings, Wallet } from "lu
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-
+import { useLogin } from "@privy-io/react-auth";
+import { useRouter } from "next/router";
 const navigation = [
   { name: "Chat", href: "/", icon: MessageCircle },
   { name: "Library", href: "/library", icon: Library },
@@ -44,13 +45,10 @@ export function LeftSidebar() {
         </nav>
       </div>
       <div className="mt-auto p-4 space-y-2">
+
         <Button variant="ghost" className="w-full justify-start gap-2">
           <Settings className="w-4 h-4" />
           Settings
-        </Button>
-        <Button className="w-full justify-start gap-2 bg-yellow-500 hover:bg-yellow-600">
-          <Wallet className="w-4 h-4" />
-          Connect Wallet
         </Button>
       </div>
     </div>

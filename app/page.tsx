@@ -1,13 +1,16 @@
+'use client'
 import { Layout } from "@/components/layout"
 import { ChatWindow } from "@/components/chat-window"
 import { Portfolio } from "@/components/portfolio"
 import { AgentActions } from "@/components/agent-actions"
 import { Tweets } from "@/components/tweets"
-
-export default function Home() {
+import { useLogin } from "@privy-io/react-auth"
+import Navbar from "@/components/navbar"
+function Home() {
   return (
     <Layout>
       <div className="flex h-full">
+      <Navbar />
         <main className="flex-1 flex">
           <ChatWindow />
         </main>
@@ -20,3 +23,5 @@ export default function Home() {
     </Layout>
   )
 }
+
+export default Home;
