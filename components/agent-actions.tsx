@@ -51,11 +51,11 @@ export function AgentActions() {
                 <Badge
                   variant={
                     action.status === "completed"
-                      ? "success"
-                      : action.status === "in progress"
                       ? "default"
+                      : action.status === "in progress"
+                      ? "secondary"
                       : action.status === "pending"
-                      ? "warning"
+                      ? "outline"
                       : "destructive"
                   }
                 >

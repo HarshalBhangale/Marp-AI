@@ -85,7 +85,7 @@ export default function TransactionsPage() {
                   <TableCell>{tx.date}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={tx.status === "completed" ? "success" : "secondary"}
+                      variant={tx.status === "completed" ? "default" : "secondary"}
                     >
                       {tx.status}
                     </Badge>
