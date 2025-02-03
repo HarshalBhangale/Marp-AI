@@ -1,6 +1,13 @@
 # MARP AI 
-
-- [git clone repo]
+```
+- git clone repo
+```
+```
 - [cd repo]
+```
+```
 - [npm install]
+```
+```
 - [npm run dev]
+```
