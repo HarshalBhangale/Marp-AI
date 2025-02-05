@@ -1,43 +1,49 @@
-'use client'
-import Image from 'next/image';
-import { usePrivy } from '@privy-io/react-auth';
-import { useEffect } from 'react';
-const Navbar = () => {
-    const { login, ready, authenticated } = usePrivy();
+"use client"
 
-    return (
-        <nav className="flex items-center justify-between px-6 py-4 bg-white shadow-sm">
-            {/* Left side - Marp Logo */}
-            <div className="flex items-center">
-                <Image
-                    src="/marp-logo.png" // Make sure to add your logo in the public folder
-                    alt="Marp Logo"
-                    width={120}
-                    height={40}
-                    className="cursor-pointer"
-                />
-                marp ai
-            </div>
+import { usePrivy } from "@privy-io/react-auth"
+import { Button } from "@/components/ui/button"
+import Image from "next/image"
+import logo from './assets/logo.png'
+export function Navbar() {
+  const { login, logout, authenticated } = usePrivy()
 
-            {/* Right side - Privy Connect Button */}
-            <div>
-                {ready && !authenticated ? (
-                    <button
-                        onClick={login}
-                        className="px-6 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        Connect Wallet
-                    </button>
-                ) : (
-                    <button
-                        className="px-6 py-2 text-white bg-green-600 rounded-lg"
-                    >
-                        Connected
-                    </button>
-                )}
-            </div>
-        </nav>
-    );
-};
+  return (
+    <nav className="fixed top-0 w-full border-b border-yellow-600/20 bg-white/80 backdrop-blur-sm z-50">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-left">
+            <Image
+              src={logo}
+              alt="Logo"
+              width={140}
+              height={40}
+              className="mr-2"
+            />
+            
+          </div>
 
-export default Navbar;
+          {/* Wallet Button */}
+          <div>
+            {authenticated ? (
+              <Button 
+                variant="outline" 
+                className="border-yellow-600/50 hover:bg-yellow-50"
+                onClick={() => logout()}
+              >
+                Disconnect Wallet
+              </Button>
+            ) : (
+              <Button 
+                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                onClick={() => login()}
+              >
+                Connect Wallet
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </nav>
+  )
+}

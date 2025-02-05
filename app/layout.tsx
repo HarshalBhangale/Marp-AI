@@ -8,8 +8,8 @@ import Providers from "@/components/providers"
 const inter = Inter({subsets: ['latin']})
 
 export const metadata: Metadata = {
-  title: 'AI Financial Assistant',
-  description: 'Your personal AI-powered financial assistant',
+  title: 'Marp AI',
+  description: '',
 }
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

@@ -1,145 +1,118 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { MoreHorizontal } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { usePrivy } from "@privy-io/react-auth"
+import { useEffect, useState } from "react"
+import { JsonRpcProvider, formatEther, parseEther } from "ethers"
 
-interface Token {
-  name: string
+// Sepolia testnet configuration
+const SEPOLIA_RPC = "https://eth-sepolia.g.alchemy.com/v2/AXW5yWl-EY8nFHF_gQp1otiKxEz4YMwh"
+
+// Test tokens on Sepolia (you can add more test tokens here)
+const SEPOLIA_TOKENS = {
+  ETH: {
+    symbol: "SEP-ETH",
+    name: "Sepolia ETH",
+    logo: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png"
+  }
+}
+
+interface TokenBalance {
   symbol: string
-  amount: string
+  name: string
+  balance: string
   value: number
-  change24h: number
   logo: string
 }
-
-interface Position {
-  protocol: string
-  tokens: string[]
-  value: number
-  apy: number
-  logo: string
-}
-
-const tokens: Token[] = [
-  {
-    name: "Ethereum",
-    symbol: "ETH",
-    amount: "3.20368",
-    value: 5407.68,
-    change24h: 6.49,
-    logo: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/info/logo.png",
-  },
-  {
-    name: "Uniswap",
-    symbol: "UNI",
-    amount: "125.00",
-    value: 4289.83,
-    change24h: 252.81,
-    logo: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png",
-  },
-  {
-    name: "Dai",
-    symbol: "DAI",
-    amount: "200.75",
-    value: 200.75,
-    change24h: -0.02,
-    logo: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6B175474E89094C44Da98b954EedeAC495271d0F/logo.png",
-  },
-]
-
-const positions: Position[] = [
-  {
-    protocol: "Uniswap",
-    tokens: ["ETH", "USDC"],
-    value: 4812.42,
-    apy: 4.4,
-    logo: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984/logo.png",
-  },
-  {
-    protocol: "Aave",
-    tokens: ["ETH"],
-    value: 2506.25,
-    apy: 3.2,
-    logo: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9/logo.png",
-  },
-]
 
 export function Portfolio() {
-  const totalValue = tokens.reduce((sum, token) => sum + token.value, 0)
-  const positionsValue = positions.reduce((sum, pos) => sum + pos.value, 0)
+  const { user, authenticated } = usePrivy()
+  const [balances, setBalances] = useState<TokenBalance[]>([])
+  const [totalValue, setTotalValue] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (!authenticated || !user?.wallet?.address) return
+
+      try {
+        setIsLoading(true)
+        const provider = new JsonRpcProvider(SEPOLIA_RPC)
+        const walletAddress = user.wallet.address
+
+        // Fetch Sepolia ETH balance
+        const balance = await provider.getBalance(walletAddress)
+        const ethBalance = formatEther(balance)
+        
+        // Using a mock price for Sepolia ETH since it's testnet
+        const mockEthPrice = 2000
+        const value = parseFloat(ethBalance) * mockEthPrice
+
+        const sepoliaBalance: TokenBalance = {
+          ...SEPOLIA_TOKENS.ETH,
+          balance: ethBalance,
+          value
+        }
+
+        setBalances([sepoliaBalance])
+        setTotalValue(value)
+
+      } catch (error) {
+        console.error("Error fetching balances:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchBalances()
+  }, [authenticated, user?.wallet?.address])
 
   return (
     <Card className="w-full bg-white/80 backdrop-blur-sm border-yellow-600/20 shadow-md">
       <CardContent className="p-6">
-        {/* Header with total value */}
+        {/* Total Value */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src="/ai-avatar.png" />
-              <AvatarFallback>AI</AvatarFallback>
-            </Avatar>
-            <Button variant="ghost" size="icon">
-              <MoreHorizontal className="h-5 w-5" />
-            </Button>
-          </div>
-          <h2 className="text-3xl font-bold">${totalValue.toLocaleString()}</h2>
-          <p className="text-sm text-muted-foreground">wallet.eth</p>
+          <h2 className="text-3xl font-bold">
+            ${isLoading ? "..." : totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {user?.wallet?.address ? 
+              `${user.wallet.address.slice(0, 6)}...${user.wallet.address.slice(-4)}` : 
+              'Connect Wallet'
+            }
+          </p>
         </div>
 
         {/* Tokens List */}
         <div className="space-y-4 mb-8">
-          {tokens.map((token) => (
-            <div key={token.symbol} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={token.logo} alt={token.name} />
-                  <AvatarFallback>{token.symbol}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-medium">{token.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {token.amount} {token.symbol}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">${token.value.toLocaleString()}</p>
-                <p className={`text-sm ${token.change24h >= 0 ? "text-green-500" : "text-red-500"}`}>
-                  {token.change24h > 0 ? "+" : ""}
-                  {token.change24h}%
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Positions */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Positions</h3>
-            <p className="text-sm text-muted-foreground">${positionsValue.toLocaleString()}</p>
-          </div>
-          <div className="space-y-4">
-            {positions.map((position, index) => (
-              <div key={index} className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
+          {isLoading ? (
+            <div className="text-center text-muted-foreground">Loading balances...</div>
+          ) : balances.length > 0 ? (
+            balances.map((token) => (
+              <div key={token.symbol} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={position.logo} alt={position.protocol} />
-                    <AvatarFallback>{position.protocol[0]}</AvatarFallback>
+                    <AvatarImage src={token.logo} alt={token.name} />
+                    <AvatarFallback>{token.symbol}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <h4 className="font-medium">{position.protocol}</h4>
+                    <h3 className="font-medium">{token.name}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {position.tokens.join("/")} • {position.apy}% APY
+                      {parseFloat(token.balance).toFixed(4)} {token.symbol}
                     </p>
                   </div>
                 </div>
-                <p className="font-medium">${position.value.toLocaleString()}</p>
+                <div className="text-right">
+                  <p className="font-medium">
+                    ${token.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
+            ))
+          ) : (
+            <div className="text-center text-muted-foreground">No tokens found</div>
+          )}
         </div>
       </CardContent>
     </Card>

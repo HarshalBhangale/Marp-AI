@@ -1,14 +1,24 @@
 "use client"
 
 import { LeftSidebar } from "./left-sidebar"
+import { Navbar } from "@/components/navbar"
 
-export function Layout({ children }: { children: React.ReactNode }) {
+interface LayoutProps {
+  children: React.ReactNode
+}
+
+export function Layout({ children }: LayoutProps) {
   return (
-    <div className="flex h-screen bg-gradient-to-br from-yellow-50 to-orange-50">
-      <LeftSidebar />
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+    <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-white">
+      <Navbar />
+      <div className="pt-16">
+        <div className="flex h-[calc(100vh-4rem)]">
+          <LeftSidebar />
+          <main className="flex-1 relative">
+            {children}
+          </main>
+        </div>
+      </div>
     </div>
   )
 }
