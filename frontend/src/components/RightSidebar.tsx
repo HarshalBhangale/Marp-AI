@@ -1,68 +1,74 @@
 'use client'
 
-import { WalletConnect } from './WalletConnect'
+import { ArrowUpRight, ArrowDownRight, User } from 'lucide-react';
 
-interface MarketData {
-  symbol: string
-  name: string
-  price: string
-  change: string
-  isPositive: boolean
-}
-
-const marketData: MarketData[] = [
-  {
-    symbol: 'BTC',
-    name: 'Bitcoin',
-    price: '48,234.21',
-    change: '+2.4%',
-    isPositive: true,
-  },
-  {
-    symbol: 'ETH',
-    name: 'Ethereum',
-    price: '2,854.12',
-    change: '-0.8%',
-    isPositive: false,
-  },
-]
-
-export default function RightSidebar() {
+const RightSidebar = () => {
   return (
-    <div className="flex flex-col w-80 bg-gray-900 border-l border-gray-800">
-      <div className="p-4 border-b border-gray-800">
-        <h2 className="text-lg font-semibold text-white">Market Overview</h2>
-      </div>
-      <div className="p-4 space-y-4">
-        {marketData.map((asset) => (
-          <div key={asset.symbol} className="bg-gray-800 rounded-lg p-4">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <h3 className="text-sm font-medium text-gray-400">{asset.name}</h3>
-                <p className="text-xs text-gray-500">{asset.symbol}</p>
-              </div>
-              <span className={`text-sm ${asset.isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                {asset.change}
-              </span>
+    <div className="w-80 bg-gray-900/50 backdrop-blur-sm border-l border-gray-700 p-4 overflow-y-auto">
+      <div className="space-y-6">
+        {/* Account Section */}
+        <div className="bg-gray-800/50 rounded-lg p-4">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="bg-gray-700 p-2 rounded-full">
+              <User className="h-6 w-6" />
             </div>
-            <div className="text-xl font-bold text-white">${asset.price}</div>
+            <div>
+              <div className="text-sm text-gray-400">Connected Wallet</div>
+              <div className="font-medium">0x075e...70ea</div>
+            </div>
           </div>
-        ))}
-        <div className="mt-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-sm font-medium text-gray-400">Quick Actions</h3>
-            <WalletConnect />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-700/50 rounded-lg p-3">
+              <div className="text-sm text-gray-400">Balance</div>
+              <div className="font-bold">2.45 ETH</div>
+            </div>
+            <div className="bg-gray-700/50 rounded-lg p-3">
+              <div className="text-sm text-gray-400">Value</div>
+              <div className="font-bold">$7,012.59</div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm">
-              Buy
-            </button>
-            <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">
-              Sell
-            </button>
+        </div>
+
+        {/* Transaction History */}
+        <div>
+          <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
+          <div className="space-y-3">
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center">
+                  <ArrowUpRight className="h-5 w-5 text-green-400 mr-2" />
+                  <div>
+                    <div className="font-medium">Bought ETH</div>
+                    <div className="text-sm text-gray-400">Today, 2:45 PM</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">+1.5 ETH</div>
+                  <div className="text-sm text-gray-400">$4,281.75</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-4">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center">
+                  <ArrowDownRight className="h-5 w-5 text-red-400 mr-2" />
+                  <div>
+                    <div className="font-medium">Sold BTC</div>
+                    <div className="text-sm text-gray-400">Yesterday, 6:12 PM</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">-0.25 BTC</div>
+                  <div className="text-sm text-gray-400">$12,058.55</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  )
-} 
+  );
+};
+
+export default RightSidebar; 
