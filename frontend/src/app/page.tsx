@@ -7,7 +7,7 @@ import ChatInterface from '@/components/ChatInterface'
 
 export default function Home() {
   return (
-    <Box h="calc(100vh - 4rem)" mt="4rem">
+    <Box h="calc(100vh - 4rem)" position="fixed" top="4rem" left="0" right="0" bottom="0">
       <Grid
         templateColumns="320px 1fr 320px"
         h="full"

@@ -18,17 +18,104 @@ import {
 import { useAccount, useConnect, useDisconnect } from '@starknet-react/core';
 import { Wallet, ChevronDown, LogOut } from 'lucide-react';
 import type { Connector } from '@starknet-react/core';
+import { useEffect, useState } from 'react';
 
 const Navbar = () => {
   const { address } = useAccount();
   const { connect, connectors: available } = useConnect();
   const { disconnect } = useDisconnect();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const bgColor = 'whiteAlpha.200'
   const truncateAddress = (addr: string) => {
     if (!addr) return '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
+
+  if (!mounted) {
+    return (
+      <Box
+        as="nav"
+        position="fixed"
+        w="full"
+        zIndex={50}
+        bg={bgColor}
+        backdropFilter="blur(8px)"
+        borderBottom="1px"
+        borderColor="gray.700"
+      >
+        <Container maxW="7xl" px={{ base: 4, sm: 6, lg: 8 }}>
+          <Flex h="16" alignItems="center" justifyContent="space-between">
+            <Flex alignItems="center">
+              <Link as={NextLink} href="/" _hover={{ textDecoration: 'none' }}>
+                <Box w="120px" h="40px">
+                  <img src="/logo.png" alt="Marp Trades Logo" width={40} height={40} />
+                </Box>
+              </Link>
+            </Flex>
+
+            <HStack spacing={4} display={{ base: 'none', md: 'flex' }}>
+              <Link
+                as={NextLink}
+                href="/"
+                px={3}
+                py={2}
+                rounded="md"
+                fontSize="sm"
+                fontWeight="medium"
+                color="gray.300"
+                _hover={{ color: 'white', textDecoration: 'none' }}
+              >
+                Home
+              </Link>
+              <Link
+                as={NextLink}
+                href="/library"
+                px={3}
+                py={2}
+                rounded="md"
+                fontSize="sm"
+                fontWeight="medium"
+                color="gray.300"
+                _hover={{ color: 'white', textDecoration: 'none' }}
+              >
+                Library
+              </Link>
+              <Link
+                as={NextLink}
+                href="/transactions"
+                px={3}
+                py={2}
+                rounded="md"
+                fontSize="sm"
+                fontWeight="medium"
+                color="gray.300"
+                _hover={{ color: 'white', textDecoration: 'none' }}
+              >
+                Transactions
+              </Link>
+            </HStack>
+
+            <Flex alignItems="center">
+              <Button
+                colorScheme="blue"
+                size="md"
+                fontSize="sm"
+                leftIcon={<Wallet size={16} />}
+                isLoading
+              >
+                Connect Wallet
+              </Button>
+            </Flex>
+          </Flex>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box
