@@ -85,7 +85,7 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
   const [recentProfitLoss, setRecentProfitLoss] = useState(0)
   const [totalProfitLoss, setTotalProfitLoss] = useState(0)
   const [volatility, setVolatility] = useState(0)
-  const [sessionTime, setSessionTime] = useState(0)
+  const [sessionTime, setSessionTime] = useState(60)
   const [isActive, setIsActive] = useState(true)
   const [marketCondition, setMarketCondition] = useState<'BULLISH' | 'BEARISH' | 'NEUTRAL'>('NEUTRAL')
   const [currentPrice, setCurrentPrice] = useState(4500)
@@ -112,15 +112,29 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
     }
   })
 
-  // Session timer
+  // Session timer with 2-minute limit
   useEffect(() => {
     const timer = setInterval(() => {
       if (isActive) {
-        setSessionTime(prev => prev + 1)
+        setSessionTime(prev => {
+          if (prev <= 1) {
+            setIsActive(false)
+            clearInterval(timer)
+            toast({
+              title: 'Session Ended',
+              description: `Final P/L: $${totalProfitLoss.toFixed(2)} (${((totalProfitLoss / (tradeState.amount * currentPrice)) * 100).toFixed(2)}%)`,
+              status: totalProfitLoss >= 0 ? 'success' : 'warning',
+              duration: 5000,
+              isClosable: true,
+            })
+            return 0
+          }
+          return prev - 1
+        })
       }
     }, 1000)
     return () => clearInterval(timer)
-  }, [isActive])
+  }, [isActive, totalProfitLoss, tradeState.amount, currentPrice])
 
   // Format time as HH:MM:SS
   const formatTime = (seconds: number) => {
@@ -421,7 +435,14 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
             <HStack w="100%" justify="space-between" bg="whiteAlpha.100" p={3} rounded="lg">
               <HStack>
                 <Icon as={Clock} />
-                <Text>Session Time: {formatTime(sessionTime)}</Text>
+                <Text>Time Remaining: </Text>
+                <Text 
+                  color={sessionTime < 30 ? 'red.400' : sessionTime < 60 ? 'yellow.400' : 'green.400'}
+                  fontWeight="bold"
+                  fontSize="lg"
+                >
+                  {formatTime(sessionTime)}
+                </Text>
               </HStack>
               <Badge
                 colorScheme={
@@ -448,6 +469,26 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
           <VStack spacing={4} h="100%" bg="whiteAlpha.50" p={4} rounded="lg" overflowY="auto">
             <Heading size="md">Trading Dashboard</Heading>
             
+            {/* Session Status */}
+            <Alert 
+              status={isActive ? 'info' : 'warning'} 
+              variant="subtle" 
+              rounded="lg"
+            >
+              <AlertIcon />
+              <Box>
+                <AlertTitle>
+                  {isActive ? 'Session Active' : 'Session Ended'}
+                </AlertTitle>
+                <AlertDescription>
+                  {isActive 
+                    ? `Trading will end in ${formatTime(sessionTime)}`
+                    : 'Trading session has ended'
+                  }
+                </AlertDescription>
+              </Box>
+            </Alert>
+
             {/* Current Price */}
             <Stat>
               <StatLabel>Current Price</StatLabel>
