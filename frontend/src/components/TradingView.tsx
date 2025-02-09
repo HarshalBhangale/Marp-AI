@@ -48,6 +48,7 @@ import {
 } from 'lucide-react'
 import { TradeState } from '@/types'
 import { useKlines, useLatestPrice } from '@/services/priceService'
+import useInterval from '@/hooks/useInterval'
 
 interface TradingViewProps {
   tradeState: TradeState
@@ -85,12 +86,21 @@ interface CandleDataFormatted {
   close: number;
 }
 
+interface TradeSignal {
+  timestamp: Date;
+  action: 'BUY' | 'SELL' | 'HOLD';
+  price: number;
+  reason: string;
+}
+
 const TradingView = ({ tradeState }: TradingViewProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chart = useRef<IChartApi | null>(null)
   const [timeframe, setTimeframe] = useState('1h')
   const { data: klineData, isLoading: isLoadingKlines } = useKlines(tradeState.selectedToken, timeframe)
   const { data: latestPrice } = useLatestPrice(tradeState.selectedToken)
+  const [tradeSignals, setTradeSignals] = useState<TradeSignal[]>([])
+  const [latestSignal, setLatestSignal] = useState<TradeSignal | null>(null)
 
   // Mock news data
   const news = [
@@ -135,6 +145,45 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
       timeframe: '1d'
     }
   ]
+
+  // Add this function to generate trade signals
+  const generateTradeSignal = () => {
+    if (!latestPrice?.data) return;
+    
+    const price = latestPrice.data;
+    const actions: ('BUY' | 'SELL' | 'HOLD')[] = ['BUY', 'SELL', 'HOLD'];
+    const reasons = {
+      BUY: ['Support level reached', 'Oversold condition', 'Bullish pattern formed'],
+      SELL: ['Resistance hit', 'Overbought condition', 'Bearish pattern formed'],
+      HOLD: ['Consolidating phase', 'Waiting for confirmation', 'No clear signal']
+    };
+    
+    // Simple random signal generation - replace with actual analysis logic
+    const action = actions[Math.floor(Math.random() * actions.length)];
+    const reason = reasons[action][Math.floor(Math.random() * reasons[action].length)];
+    
+    const newSignal: TradeSignal = {
+      timestamp: new Date(),
+      action,
+      price,
+      reason
+    };
+    
+    setLatestSignal(newSignal);
+    setTradeSignals(prev => [newSignal, ...prev].slice(0, 10));
+  };
+
+  // Add interval to update signals every minute
+  useInterval(() => {
+    generateTradeSignal();
+  }, 60000); // 60000ms = 1 minute
+
+  // Generate initial signal
+  useEffect(() => {
+    if (latestPrice) {
+      generateTradeSignal();
+    }
+  }, [latestPrice]);
 
   useEffect(() => {
     if (chartContainerRef.current) {
@@ -329,6 +378,73 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
                   ))}
                 </Tbody>
               </Table>
+            </Box>
+
+            {/* Add Trade Recommendations Section */}
+            <Box>
+              <Heading size="sm" mb={4}>
+                <Flex align="center" gap={2}>
+                  <Icon as={Target} />
+                  <Text>Trade Recommendations</Text>
+                </Flex>
+              </Heading>
+              <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                <Box bg="whiteAlpha.50" p={4} rounded="lg" borderWidth="1px" borderColor="whiteAlpha.100">
+                  <Heading size="sm" mb={3}>Current Signal</Heading>
+                  {latestSignal && (
+                    <VStack align="start" spacing={2}>
+                      <Badge
+                        colorScheme={
+                          latestSignal.action === 'BUY' ? 'green' :
+                          latestSignal.action === 'SELL' ? 'red' : 'yellow'
+                        }
+                        fontSize="lg"
+                        px={3}
+                        py={1}
+                      >
+                        {latestSignal.action}
+                      </Badge>
+                      <Text fontSize="sm" color="gray.400">
+                        Price: ${latestSignal.price?.toLocaleString()}
+                      </Text>
+                      <Text fontSize="sm">{latestSignal.reason}</Text>
+                      <Text fontSize="xs" color="gray.500">
+                        {latestSignal.timestamp.toLocaleTimeString()}
+                      </Text>
+                    </VStack>
+                  )}
+                </Box>
+                <Box bg="whiteAlpha.50" p={4} rounded="lg" borderWidth="1px" borderColor="whiteAlpha.100">
+                  <Heading size="sm" mb={3}>Signal History</Heading>
+                  <VStack align="stretch" spacing={2} maxH="200px" overflowY="auto">
+                    {tradeSignals.map((signal, index) => (
+                      <Flex
+                        key={index}
+                        justify="space-between"
+                        align="center"
+                        bg="whiteAlpha.50"
+                        p={2}
+                        rounded="md"
+                      >
+                        <HStack>
+                          <Badge
+                            colorScheme={
+                              signal.action === 'BUY' ? 'green' :
+                              signal.action === 'SELL' ? 'red' : 'yellow'
+                            }
+                          >
+                            {signal.action}
+                          </Badge>
+                          <Text fontSize="xs">${signal.price?.toLocaleString()}</Text>
+                        </HStack>
+                        <Text fontSize="xs" color="gray.500">
+                          {signal.timestamp.toLocaleTimeString()}
+                        </Text>
+                      </Flex>
+                    ))}
+                  </VStack>
+                </Box>
+              </Grid>
             </Box>
           </VStack>
         </GridItem>

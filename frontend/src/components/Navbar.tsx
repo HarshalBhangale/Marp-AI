@@ -130,15 +130,20 @@ const Navbar = () => {
     >
       <Container maxW="7xl" px={{ base: 4, sm: 6, lg: 8 }}>
         <Flex h="16" alignItems="center" justifyContent="space-between">
-          <Flex alignItems="center">
+          <Flex alignItems="center" flex={1}>
             <Link as={NextLink} href="/" _hover={{ textDecoration: 'none' }}>
-              <Box w="120px" h="40px">
-                <img src="/logo.png" alt="Marp Trades Logo" width={40} height={40} />
-              </Box>
+              <Flex alignItems="center" gap={3}>
+                <Box w="50px" h="50px">
+                  <img src="/logo.png" alt="Marp Trades Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                </Box>
+                <Text fontSize="xl" fontWeight="bold" color="white">
+                  Marp Trades
+                </Text>
+              </Flex>
             </Link>
           </Flex>
 
-          <HStack spacing={4} display={{ base: 'none', md: 'flex' }}>
+          <HStack spacing={4} display={{ base: 'none', md: 'flex' }} flex={2} justifyContent="center">
             <Link
               as={NextLink}
               href="/"
@@ -180,7 +185,7 @@ const Navbar = () => {
             </Link>
           </HStack>
 
-          <Flex alignItems="center">
+          <Flex alignItems="center" flex={1} justifyContent="flex-end">
             {address ? (
               <Menu>
                 <MenuButton

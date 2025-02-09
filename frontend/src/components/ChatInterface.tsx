@@ -80,6 +80,57 @@ interface TradePerformance {
   roi: number;
 }
 
+const MARP_TRADES_KNOWLEDGE = {
+  tradingStrategies: {
+    'DCA': {
+      name: 'Dollar Cost Averaging (DCA)',
+      description: 'Automated strategy that buys a fixed amount at regular intervals on Starknet, reducing impact of volatility.',
+      riskLevel: 'LOW',
+      features: ['Regular interval purchases', 'Reduced emotional trading', 'Long-term accumulation']
+    },
+    'GRID': {
+      name: 'Grid Trading',
+      description: 'Places multiple buy and sell orders at regular intervals above and below the current market price on Starknet DEXes.',
+      riskLevel: 'MEDIUM',
+      features: ['Profit from sideways markets', 'Automated rebalancing', 'Works best in ranging markets']
+    },
+    'TWAP': {
+      name: 'Time Weighted Average Price',
+      description: 'Executes trades over specified time periods on Starknet to achieve the average market price.',
+      riskLevel: 'LOW',
+      features: ['Reduced slippage', 'Minimized market impact', 'Best for large orders']
+    },
+    'MOMENTUM': {
+      name: 'Momentum Trading',
+      description: 'Uses technical indicators and AI predictions to identify trends on Starknet markets.',
+      riskLevel: 'HIGH',
+      features: ['Trend following', 'AI-powered signals', 'Dynamic position sizing']
+    }
+  },
+  features: {
+    'StarknetIntegration': 'Direct integration with Starknet for low-cost, secure trading',
+    'AIAnalysis': 'Advanced market analysis using machine learning models',
+    'RiskManagement': 'Automated position sizing and risk control based on account size',
+    'AutomatedTrading': 'Fully automated trade execution with customizable parameters'
+  },
+  supportedDEXs: [
+    'JediSwap',
+    'MySwap',
+    '10kSwap',
+    'Avnu',
+    'SithSwap'
+  ],
+  tradingPairs: [
+    { symbol: 'ETH', name: 'Ethereum' },
+    { symbol: 'BTC', name: 'Bitcoin' },
+    { symbol: 'USDT', name: 'Tether' },
+    { symbol: 'USDC', name: 'USD Coin' },
+    { symbol: 'DAI', name: 'Dai' },
+    { symbol: 'LORDS', name: 'Lords' },
+    { symbol: 'STRK', name: 'Starknet Token' }
+  ]
+};
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -108,7 +159,12 @@ const ChatInterface = () => {
     setMessages([
       {
         id: 1,
-        content: 'Hello! I\'m your Marp Trades assistant built on starknet. I can help you analyze market trends, execute trades, and provide real-time insights. How can I assist you today?',
+        content: "Hello! I'm your Marp Trades assistant powered by advanced AI. I specialize in automated trading on Starknet, offering low-cost and secure trading strategies. I can help you with:\n\n" +
+                "• Setting up automated trading strategies on Starknet DEXs\n" +
+                "• Real-time market analysis and AI-powered predictions\n" +
+                "• Risk management and position sizing\n" +
+                "• Cross-DEX liquidity analysis\n\n" +
+                "Type 'trade' to start trading or ask me anything about Marp Trades!",
         sender: 'bot',
         timestamp: new Date(),
       },
@@ -120,21 +176,13 @@ const ChatInterface = () => {
   }, [messages])
 
   const handleTradeCommand = () => {
-    const tokens = [
-      { symbol: 'BTC', name: 'Bitcoin' },
-      { symbol: 'ETH', name: 'Ethereum' },
-      { symbol: 'SOL', name: 'Solana' },
-      { symbol: 'PEPE', name: 'Pepe' },
-      { symbol: 'WIF', name: 'Dogwifhat' },
-    ]
-
-    const tokenList = tokens.map(token => 
-      `${token.symbol} - ${token.name}`
-    ).join('\n')
+    const tokenList = MARP_TRADES_KNOWLEDGE.tradingPairs
+      .map(token => `${token.symbol} - ${token.name}`)
+      .join('\n');
 
     const botResponse: Message = {
       id: messages.length + 2,
-      content: `Please select a token to trade:\n\n${tokenList}\n\nJust type the symbol (e.g., "BTC") to select.`,
+      content: `Please select a token to trade on Starknet:\n\n${tokenList}\n\nJust type the symbol (e.g., "ETH") to select.`,
       sender: 'bot',
       timestamp: new Date(),
     }
@@ -143,16 +191,15 @@ const ChatInterface = () => {
 
   const handleTokenSelection = (token: string) => {
     setTradeState(prev => ({ ...prev, selectedToken: token }))
-    const strategies = [
-      'Dollar Cost Averaging (DCA)',
-      'Grid Trading',
-      'TWAP (Time Weighted Average Price)',
-      'Momentum Trading',
-    ]
+    
+    const strategies = Object.values(MARP_TRADES_KNOWLEDGE.tradingStrategies)
+      .map((strategy, index) => 
+        `${index + 1}. ${strategy.name}\n   ${strategy.description}\n   Risk Level: ${strategy.riskLevel}`
+      );
 
     const botResponse: Message = {
       id: messages.length + 2,
-      content: `You've selected ${token}. Please choose a trading strategy:\n\n${strategies.join('\n')}\n\nType the number (1-4) to select.`,
+      content: `You've selected ${token} for trading on Starknet.\n\nPlease choose a trading strategy:\n\n${strategies.join('\n\n')}\n\nType the number (1-4) to select.`,
       sender: 'bot',
       timestamp: new Date(),
     }
@@ -160,18 +207,13 @@ const ChatInterface = () => {
   }
 
   const handleStrategySelection = (strategyNumber: number) => {
-    const strategies = [
-      'Dollar Cost Averaging (DCA)',
-      'Grid Trading',
-      'TWAP',
-      'Momentum Trading',
-    ]
-    const strategy = strategies[strategyNumber - 1]
+    const strategies = Object.values(MARP_TRADES_KNOWLEDGE.tradingStrategies);
+    const strategy = strategies[strategyNumber - 1].name;
     setTradeState(prev => ({ ...prev, strategy }))
 
     const botResponse: Message = {
       id: messages.length + 2,
-      content: `Strategy selected: ${strategy}\n\nPlease specify your risk level (Low/Medium/High):`,
+      content: `Strategy selected: ${strategy}\n\nPlease specify your risk level for Starknet trading (Low/Medium/High):\n\nLOW - Conservative position sizing, tight stop losses\nMEDIUM - Balanced approach with moderate leverage\nHIGH - Aggressive position sizing, wider stops`,
       sender: 'bot',
       timestamp: new Date(),
     }
@@ -183,7 +225,7 @@ const ChatInterface = () => {
 
     const botResponse: Message = {
       id: messages.length + 2,
-      content: `Risk level set to ${risk}. How much would you like to invest? (in USD)`,
+      content: `Risk level set to ${risk}. How much would you like to invest in USDC? This will be used to calculate position sizes on Starknet.`,
       sender: 'bot',
       timestamp: new Date(),
     }
@@ -201,34 +243,34 @@ const ChatInterface = () => {
           price: 65000,
           amount: amount * 0.3,
           timestamp: new Date(),
-          fees: amount * 0.001,
+          fees: amount * 0.0001, // Lower fees on Starknet
         },
         {
           type: 'BUY',
           price: 64000,
           amount: amount * 0.4,
           timestamp: new Date(Date.now() - 3600000),
-          fees: amount * 0.001,
+          fees: amount * 0.0001,
         },
         {
           type: 'SELL',
           price: 66000,
           amount: amount * 0.2,
           timestamp: new Date(Date.now() - 7200000),
-          fees: amount * 0.001,
+          fees: amount * 0.0001,
         },
       ],
       performance: {
         averageEntry: 64500,
         totalProfit: amount * 0.05,
-        totalFees: amount * 0.003,
+        totalFees: amount * 0.0003, // Accumulated Starknet fees
         roi: 5,
       }
     }))
 
     const botResponse: Message = {
       id: messages.length + 2,
-      content: `Perfect! I've initiated the trading strategy with $${amount}. I'll now show you the trading dashboard with real-time updates.`,
+      content: `Perfect! I've initiated the Starknet trading strategy with $${amount} USDC. I'll now show you the trading dashboard with real-time updates from Starknet DEXs. Your trades will be executed with minimal fees and maximum security.`,
       sender: 'bot',
       timestamp: new Date(),
     }
