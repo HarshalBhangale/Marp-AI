@@ -13,12 +13,43 @@ import {
   Avatar,
   Divider,
   Badge,
+  Skeleton,
 } from '@chakra-ui/react'
+import { useAccount, useBalance } from '@starknet-react/core'
+import { useState, useEffect } from 'react'
 
 const RightSidebar = () => {
+  const { address } = useAccount()
+  const { data: ethBalance, isLoading: isLoadingEth } = useBalance({
+    address,
+    token: '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7' // ETH contract on Starknet
+  })
+  const { data: usdcBalance, isLoading: isLoadingUsdc } = useBalance({
+    address,
+    token: '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8' // USDC contract on Starknet
+  })
+
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const bgGradient = 'linear(to-b, gray.900, gray.800)'
   const cardBg = 'whiteAlpha.50'
   const borderColor = 'whiteAlpha.100'
+
+  const formatBalance = (balance: any) => {
+    if (!balance) return '0'
+    return (Number(balance.value) / Math.pow(10, balance.decimals)).toFixed(4)
+  }
+
+  const formatAddress = (addr: string) => {
+    if (!addr) return ''
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`
+  }
+
+  if (!mounted) return null
 
   return (
     <Box
@@ -62,7 +93,9 @@ const RightSidebar = () => {
               />
               <Box>
                 <Text fontSize="sm" color="gray.400">Connected Wallet</Text>
-                <Text fontWeight="medium" fontSize="md">0x075e...70ea</Text>
+                <Text fontWeight="medium" fontSize="md">
+                  {address ? formatAddress(address) : 'Not Connected'}
+                </Text>
               </Box>
             </Flex>
             <Grid templateColumns="repeat(2, 1fr)" gap={4}>
@@ -73,8 +106,14 @@ const RightSidebar = () => {
                 borderWidth="1px"
                 borderColor={borderColor}
               >
-                <Text fontSize="sm" color="gray.400">Balance</Text>
-                <Text fontWeight="bold" fontSize="lg">2.45 ETH</Text>
+                <Text fontSize="sm" color="gray.400">ETH Balance</Text>
+                {isLoadingEth ? (
+                  <Skeleton height="24px" mt={1} />
+                ) : (
+                  <Text fontWeight="bold" fontSize="lg">
+                    {formatBalance(ethBalance)} ETH
+                  </Text>
+                )}
               </Box>
               <Box
                 bg="whiteAlpha.100"
@@ -83,8 +122,14 @@ const RightSidebar = () => {
                 borderWidth="1px"
                 borderColor={borderColor}
               >
-                <Text fontSize="sm" color="gray.400">Value</Text>
-                <Text fontWeight="bold" fontSize="lg">$7,012.59</Text>
+                <Text fontSize="sm" color="gray.400">USDC Balance</Text>
+                {isLoadingUsdc ? (
+                  <Skeleton height="24px" mt={1} />
+                ) : (
+                  <Text fontWeight="bold" fontSize="lg">
+                    {formatBalance(usdcBalance)} USDC
+                  </Text>
+                )}
               </Box>
             </Grid>
           </Box>
@@ -99,6 +144,7 @@ const RightSidebar = () => {
             <Heading size="md">Recent Transactions</Heading>
           </Flex>
           <VStack spacing={3} align="stretch">
+            {/* We can add real transaction history here later */}
             <Box
               bg={cardBg}
               rounded="xl"

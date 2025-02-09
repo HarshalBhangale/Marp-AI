@@ -1,6 +1,6 @@
 'use client'
 
-import { Send, Bot, User, ChevronDown, DollarSign, LineChart, Settings } from 'lucide-react'
+import { Send, Bot, User, ChevronDown, DollarSign, LineChart, Settings, Twitter, Github } from 'lucide-react'
 import { useState, KeyboardEvent, ChangeEvent, useEffect, useRef } from 'react'
 import { Message } from '@/types'
 import {
@@ -44,6 +44,7 @@ import {
   ModalBody,
   ModalCloseButton,
   useDisclosure,
+  Link,
 } from '@chakra-ui/react'
 import TradingView from './TradingView'
 
@@ -173,8 +174,94 @@ const MARP_KNOWLEDGE = {
     swap: 'Swap tokens on supported DEXs',
     info: 'Get information about trading pairs or platform features',
     help: 'List all available commands'
-  }
+  },
+  owners: [
+    {
+      name: 'Harshal Buddh',
+      role: 'Frontned lead',
+      image: '/assets/harshal.png',
+      description: 'Co-founder of Tribeviz (2022). Previously led development at Ordex.io, Ajna.capital, and toradle.com. Creator of Angrypets.io. Experienced blockchain entrepreneur with multiple successful projects.',
+      expertise: ['DeFi Architecture', 'NFTs', 'Smart Contracts', 'Project Leadership'],
+      social: {
+        twitter: '@harshalmarp',
+        github: 'buddyharshal'
+      }
+    },
+    {
+      name: 'Prateush Sharma',
+      role: 'Blockchain Lead',
+      image: '/assets/pratyush.jpg',
+      description: 'BTech 3rd year Computer Science and Engineering student at IIT Dhanbad. Blockchain Researcher and Developer with experience at AuctionX. Specializes in blockchain architecture and smart contract development.',
+      expertise: ['Blockchain Research', 'Smart Contracts', 'DeFi Protocols'],
+      social: {
+        twitter: '@prateush',
+        github: 'prateush'
+      }
+    },
+    {
+      name: 'Mihir',
+      role: 'ML & AI Lead',
+      image: '/assets/mihir.jpg',
+      description: 'BTech 3rd year Computer Science and Engineering student at IIT Dhanbad. Upcoming intern at Samsung. Specializes in machine learning and AI integration for trading systems.',
+      expertise: ['Machine Learning', 'AI Trading', 'Data Analysis'],
+      social: {
+        twitter: '@mihir_ai',
+        github: 'mihir'
+      }
+    }
+  ]
 };
+
+const TeamView = ({ owners }: { owners: typeof MARP_KNOWLEDGE.owners }) => (
+  <Grid templateColumns="repeat(3, 1fr)" gap={6} p={4} bg="whiteAlpha.50" rounded="xl">
+    {owners.map((owner, index) => (
+      <GridItem key={index}>
+        <Box bg="whiteAlpha.100" p={4} rounded="lg" height="100%">
+          <VStack spacing={4} align="center">
+            <Box
+              width="150px"
+              height="150px"
+              rounded="full"
+              overflow="hidden"
+              border="3px solid"
+              borderColor="blue.400"
+            >
+              <img
+                src={owner.image}
+                alt={owner.name}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+            </Box>
+            <VStack spacing={1} textAlign="center">
+              <Heading size="md" color="white">{owner.name}</Heading>
+              <Text color="blue.400" fontWeight="bold" fontSize="sm">{owner.role}</Text>
+              <Text color="gray.300" fontSize="sm" mt={2}>{owner.description}</Text>
+              <Flex gap={2} mt={2} flexWrap="wrap" justify="center">
+                {owner.expertise.map((skill, i) => (
+                  <Badge key={i} colorScheme="blue" variant="subtle" fontSize="xs">
+                    {skill}
+                  </Badge>
+                ))}
+              </Flex>
+              <Flex gap={3} mt={3}>
+                <Link href={`https://twitter.com/${owner.social.twitter.slice(1)}`} isExternal>
+                  <Icon as={Twitter} color="blue.400" boxSize={5} />
+                </Link>
+                <Link href={`https://github.com/${owner.social.github}`} isExternal>
+                  <Icon as={Github} color="blue.400" boxSize={5} />
+                </Link>
+              </Flex>
+            </VStack>
+          </VStack>
+        </Box>
+      </GridItem>
+    ))}
+  </Grid>
+);
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([])
@@ -376,6 +463,25 @@ const ChatInterface = () => {
 
   const handleKnowledgeQuery = async (query: string) => {
     try {
+      // Check if the query is about owners
+      const isOwnerQuery = query.toLowerCase().includes('owner') || 
+                          query.toLowerCase().includes('team') ||
+                          query.toLowerCase().includes('founder');
+
+      if (isOwnerQuery) {
+        const teamViewResponse = `<team-view>\n\nMeet the founders of Marp Trades - a team of blockchain veterans, DeFi experts, and trading specialists who are revolutionizing decentralized trading on Starknet.`;
+        
+        const botResponse: Message = {
+          id: messages.length + 2,
+          content: teamViewResponse,
+          sender: 'bot',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, botResponse]);
+        return;
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -525,7 +631,7 @@ const ChatInterface = () => {
               justify={message.sender === 'user' ? 'flex-end' : 'flex-start'}
             >
               <Flex
-                maxW="70%"
+                maxW={message.content.includes('<team-view>') ? '100%' : '70%'}
                 gap={2}
                 align="start"
               >
@@ -541,8 +647,18 @@ const ChatInterface = () => {
                   py={2}
                   rounded="lg"
                   fontSize="sm"
+                  width={message.content.includes('<team-view>') ? '100%' : 'auto'}
                 >
-                  <Text whiteSpace="pre-line">{message.content}</Text>
+                  {message.content.includes('<team-view>') ? (
+                    <>
+                      <Text whiteSpace="pre-line" mb={4}>
+                        {message.content.split('<team-view>')[1]}
+                      </Text>
+                      <TeamView owners={MARP_KNOWLEDGE.owners} />
+                    </>
+                  ) : (
+                    <Text whiteSpace="pre-line">{message.content}</Text>
+                  )}
                   <Text fontSize="xs" color="whiteAlpha.600" mt={1}>
                     {formatTime(message.timestamp)}
                   </Text>
