@@ -13,6 +13,7 @@ import {
   HStack,
   Badge,
   useToast,
+  Icon,
 } from '@chakra-ui/react';
 import {
   ResponsiveContainer,
@@ -24,17 +25,26 @@ import {
   Tooltip,
 } from 'recharts';
 
+interface Trade {
+  timestamp: Date;
+  amount: number;
+  strategy: number;
+  runningTotal: number;
+  timeElapsed: number;
+  portfolioValue: number;
+}
+
 const TradingSimulator = () => {
   const [investment, setInvestment] = useState(20);
   const [currentProfit, setCurrentProfit] = useState(0);
-  const [trades, setTrades] = useState([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [currentStrategy, setCurrentStrategy] = useState(1);
   const [isRunning, setIsRunning] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(90);
   const [showGraph, setShowGraph] = useState(false);
   const toast = useToast();
 
-  const addTrade = (amount, strategy) => {
+  const addTrade = (amount: number, strategy: number) => {
     const timestamp = new Date();
     setTrades(prev => [...prev, {
       timestamp,
@@ -71,15 +81,15 @@ const TradingSimulator = () => {
     const generateRandomTrades = () => {
       const numTrades = 15; // Number of trades to generate
       const trades = [];
-     
+      
       for (let i = 0; i < numTrades; i++) {
         const delay = Math.floor((90 * i) / numTrades) * 1000; // Spread trades across 90 seconds
-        const profit = (Math.random() * 4 - 1).toFixed(2) * 1; // Random profit between -1 and 3
+        const profit = parseFloat((Math.random() * 4 - 1).toFixed(2)); // Random profit between -1 and 3
         const strategy = Math.random() > 0.5 ? 1 : 2; // Randomly switch strategies
-       
+        
         trades.push({ delay, profit, strategy });
       }
-     
+      
       return trades;
     };
 
@@ -117,9 +127,9 @@ const TradingSimulator = () => {
       clearInterval(timer);
       setIsRunning(false);
     };
-  }, [isRunning, currentProfit]);
+  }, [isRunning, currentProfit, toast]);
 
-  const formatTimeRemaining = (seconds) => {
+  const formatTimeRemaining = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -130,7 +140,7 @@ const TradingSimulator = () => {
       <Box bg="gray.800" rounded="xl" shadow="xl" p={6}>
         <Flex justify="space-between" align="center" mb={6}>
           <Box>
-            <Heading size="lg" mb={2}>Trading Simulation</Heading>
+            <Heading size="lg" mb={2}>Trading Simulator</Heading>
             <Text color="gray.400">Initial Investment: ${investment}</Text>
           </Box>
           <HStack spacing={4}>
@@ -253,4 +263,4 @@ const TradingSimulator = () => {
   );
 };
 
-export default TradingSimulator; 
+export default TradingSimulator;

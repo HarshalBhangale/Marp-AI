@@ -131,6 +131,51 @@ const MARP_TRADES_KNOWLEDGE = {
   ]
 };
 
+// Add knowledge base about Marp Trades
+const MARP_KNOWLEDGE = {
+  platform: {
+    name: 'Marp Trades',
+    description: 'Advanced trading platform on Starknet with AI-powered analysis',
+    features: [
+      'Low-cost trading on Starknet',
+      'AI-powered market analysis',
+      'Multiple trading strategies',
+      'Real-time market data',
+      'Automated trading execution'
+    ]
+  },
+  tradingStrategies: {
+    DCA: {
+      name: 'Dollar Cost Averaging',
+      description: 'Automated strategy that buys at regular intervals to reduce volatility impact',
+      riskLevel: 'Low'
+    },
+    GRID: {
+      name: 'Grid Trading',
+      description: 'Places multiple orders at different price levels to profit from price oscillations',
+      riskLevel: 'Medium'
+    },
+    MOMENTUM: {
+      name: 'Momentum Trading',
+      description: 'Uses technical indicators and AI predictions to follow market trends',
+      riskLevel: 'High'
+    }
+  },
+  supportedDEXs: [
+    'JediSwap',
+    'MySwap',
+    '10kSwap',
+    'Avnu',
+    'SithSwap'
+  ],
+  tradingCommands: {
+    trade: 'Start trading with a specific strategy',
+    swap: 'Swap tokens on supported DEXs',
+    info: 'Get information about trading pairs or platform features',
+    help: 'List all available commands'
+  }
+};
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -159,12 +204,12 @@ const ChatInterface = () => {
     setMessages([
       {
         id: 1,
-        content: "Hello! I'm your Marp Trades assistant powered by advanced AI. I specialize in automated trading on Starknet, offering low-cost and secure trading strategies. I can help you with:\n\n" +
-                "• Setting up automated trading strategies on Starknet DEXs\n" +
-                "• Real-time market analysis and AI-powered predictions\n" +
-                "• Risk management and position sizing\n" +
-                "• Cross-DEX liquidity analysis\n\n" +
-                "Type 'trade' to start trading or ask me anything about Marp Trades!",
+        content: "Hello! I'm your Marp Trades assistant. I can help you with:\n\n" +
+                "• Trading on Starknet (type 'trade' to start)\n" +
+                "• Token swaps (e.g., 'swap 0.1 ETH to USDC')\n" +
+                "• Information about our platform and features\n" +
+                "• Trading strategies and market analysis\n\n" +
+                "What would you like to do?",
         sender: 'bot',
         timestamp: new Date(),
       },
@@ -278,56 +323,93 @@ const ChatInterface = () => {
     onOpen()
   }
 
-  const handleSend = () => {
-    if (!input.trim()) return
+  const handleSend = async () => {
+    if (!input.trim()) return;
 
-    const newMessage: Message = {
+    const userMessage: Message = {
       id: messages.length + 1,
       content: input,
       sender: 'user',
       timestamp: new Date(),
-    }
+    };
 
-    setMessages([...messages, newMessage])
-    setInput('')
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
 
-    // Handle different stages of the trading flow
-    if (input.toLowerCase() === 'trade') {
-      handleTradeCommand()
-    } else if (!tradeState.selectedToken && /^[A-Za-z]{2,5}$/.test(input)) {
-      handleTokenSelection(input.toUpperCase())
-    } else if (tradeState.selectedToken && !tradeState.strategy && /^[1-4]$/.test(input)) {
-      handleStrategySelection(parseInt(input))
-    } else if (tradeState.strategy && !tradeState.riskLevel && /^(LOW|MEDIUM|HIGH)$/i.test(input)) {
-      handleRiskLevel(input.toUpperCase())
-    } else if (tradeState.riskLevel && !tradeState.amount && /^\d+(\.\d+)?$/.test(input)) {
-      handleAmount(parseFloat(input))
+    // Check if input is a trading command
+    const lowerInput = input.toLowerCase();
+    if (lowerInput === 'trade') {
+      handleTradeCommand();
+    } else if (lowerInput.startsWith('swap')) {
+      handleSwapCommand(input);
     } else {
-      // If no specific command is matched, send a helpful message
-      setTimeout(() => {
-        let helpMessage = ''
-        if (!tradeState.selectedToken) {
-          helpMessage = 'Please enter a valid token symbol (e.g., BTC, ETH, SOL)'
-        } else if (!tradeState.strategy) {
-          helpMessage = 'Please select a strategy (1-4):\n1. Dollar Cost Averaging (DCA)\n2. Grid Trading\n3. TWAP\n4. Momentum Trading'
-        } else if (!tradeState.riskLevel) {
-          helpMessage = 'Please specify your risk level (LOW/MEDIUM/HIGH)'
-        } else if (!tradeState.amount) {
-          helpMessage = 'Please enter the amount you want to invest (in USD)'
-        } else {
-          helpMessage = 'I\'m analyzing your request. Please wait while I process the trading information.'
-        }
-
-        const botResponse: Message = {
-          id: messages.length + 2,
-          content: helpMessage,
-          sender: 'bot',
-          timestamp: new Date(),
-        }
-        setMessages(prev => [...prev, botResponse])
-      }, 500)
+      // If not a trading command, treat as a knowledge base query
+      await handleKnowledgeQuery(input);
     }
-  }
+  };
+
+  const handleSwapCommand = (input: string) => {
+    // Extract tokens from swap command (e.g., "swap 0.1 ETH to USDC")
+    const parts = input.split(' ');
+    if (parts.length !== 5 || parts[3].toLowerCase() !== 'to') {
+      const helpMessage: Message = {
+        id: messages.length + 2,
+        content: 'Please use the format: swap [amount] [fromToken] to [toToken]\nExample: swap 0.1 ETH to USDC',
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, helpMessage]);
+      return;
+    }
+
+    const [_, amount, fromToken, __, toToken] = parts;
+    const botResponse: Message = {
+      id: messages.length + 2,
+      content: `Preparing to swap ${amount} ${fromToken} to ${toToken} using the best available rate across our supported DEXs:\n\n` +
+               `• JediSwap\n• MySwap\n• 10kSwap\n• Avnu\n• SithSwap\n\n` +
+               `Please confirm by typing 'confirm swap' or 'cancel'`,
+      sender: 'bot',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, botResponse]);
+  };
+
+  const handleKnowledgeQuery = async (query: string) => {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: query,
+          context: MARP_KNOWLEDGE
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
+
+      const data = await response.json();
+      const botResponse: Message = {
+        id: messages.length + 2,
+        content: data.response,
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        content: "I apologize, but I'm having trouble processing your request at the moment. Please try again.",
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    }
+  };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {

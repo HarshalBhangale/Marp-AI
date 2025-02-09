@@ -132,12 +132,12 @@ const Navbar = () => {
         <Flex h="16" alignItems="center" justifyContent="space-between">
           <Flex alignItems="center" flex={1}>
             <Link as={NextLink} href="/" _hover={{ textDecoration: 'none' }}>
-              <Flex alignItems="center" gap={3}>
+              <Flex alignItems="center" gap={0}>
                 <Box w="50px" h="50px">
                   <img src="/logo.png" alt="Marp Trades Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </Box>
-                <Text fontSize="xl" fontWeight="bold" color="white">
-                  Marp Trades
+                <Text fontSize="lg" fontWeight="black" color="white">
+                  Trades
                 </Text>
               </Flex>
             </Link>
