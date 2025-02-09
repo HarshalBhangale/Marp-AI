@@ -73,6 +73,52 @@ interface TradeSignal {
   reason: string
 }
 
+interface PriceData {
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+  datetime: string
+}
+
+const historicalPrices: PriceData[] = [
+  { open: 3.668, high: 3.82, low: 3.085, close: 3.097, volume: 115899, datetime: '2020-01-01 00:00:00' },
+  { open: 3.096, high: 3.195, low: 2.813, close: 3.023, volume: 109646, datetime: '2020-01-01 00:15:00' },
+  { open: 3.026, high: 3.135, low: 2.926, close: 3.007, volume: 63352, datetime: '2020-01-01 00:30:00' },
+  { open: 3.003, high: 3.193, low: 2.95, close: 3.067, volume: 52323, datetime: '2020-01-01 00:45:00' },
+  { open: 3.067, high: 3.141, low: 2.854, close: 2.872, volume: 40957, datetime: '2020-01-01 01:00:00' },
+  { open: 2.873, high: 2.909, low: 2.715, close: 2.746, volume: 44614, datetime: '2020-01-01 01:15:00' },
+  { open: 2.746, high: 2.885, low: 2.58, close: 2.621, volume: 40742, datetime: '2020-01-01 01:30:00' },
+  { open: 2.621, high: 2.678, low: 2.38, close: 2.527, volume: 49874, datetime: '2020-01-01 01:45:00' },
+  { open: 2.526, high: 2.61, low: 2.405, close: 2.405, volume: 40233, datetime: '2020-01-01 02:00:00' },
+  { open: 2.406, high: 2.488, low: 2.27, close: 2.395, volume: 43572, datetime: '2020-01-01 02:15:00' },
+  { open: 2.395, high: 2.42, low: 2.26, close: 2.342, volume: 33555, datetime: '2020-01-01 02:30:00' },
+  { open: 2.342, high: 2.4, low: 2.251, close: 2.299, volume: 31793, datetime: '2020-01-01 02:45:00' },
+  { open: 2.301, high: 2.35, low: 2.118, close: 2.177, volume: 34392, datetime: '2020-01-01 03:00:00' },
+  { open: 2.177, high: 2.235, low: 2.126, close: 2.162, volume: 24986, datetime: '2020-01-01 03:15:00' },
+  { open: 2.162, high: 2.214, low: 2.131, close: 2.145, volume: 20377, datetime: '2020-01-01 03:30:00' }
+];
+
+const getRandomPricePoint = () => {
+  const randomIndex = Math.floor(Math.random() * historicalPrices.length);
+  return historicalPrices[randomIndex];
+};
+
+const calculatePriceChange = (currentData: PriceData, nextData: PriceData) => {
+  // Calculate base change from historical data
+  const baseChange = (nextData.close - currentData.close) / currentData.close;
+  
+  // Add volume-weighted volatility
+  const volumeFactor = Math.min(nextData.volume / currentData.volume, 2);
+  const volatilityRange = Math.abs(nextData.high - nextData.low) / nextData.low;
+  
+  // Random factor influenced by volume and volatility
+  const randomFactor = (Math.random() * 0.002 - 0.001) * volumeFactor * volatilityRange;
+  
+  return baseChange + randomFactor;
+};
+
 const TradingView = ({ tradeState }: TradingViewProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chart = useRef<IChartApi | null>(null)
@@ -88,8 +134,9 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
   const [sessionTime, setSessionTime] = useState(60)
   const [isActive, setIsActive] = useState(true)
   const [marketCondition, setMarketCondition] = useState<'BULLISH' | 'BEARISH' | 'NEUTRAL'>('NEUTRAL')
-  const [currentPrice, setCurrentPrice] = useState(0.2363)
-  const [priceHistory, setPriceHistory] = useState<number[]>([0.2363])
+  const [currentPrice, setCurrentPrice] = useState(historicalPrices[0].close)
+  const [priceHistory, setPriceHistory] = useState<number[]>([historicalPrices[0].close])
+  const [currentPriceIndex, setCurrentPriceIndex] = useState(0)
   const toast = useToast()
 
   // Strategy parameters
@@ -144,53 +191,63 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
     return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
   }
 
-  // Simulate price movement and trading
+  // Simulate price movement and trading using historical data
   useEffect(() => {
     if (!isActive) return
 
     const priceInterval = setInterval(() => {
-      const volatilityFactor = (Math.random() * 0.004) + 0.001 // 0.1% to 0.5% volatility
-      setVolatility(volatilityFactor)
+      // Get current and next price points
+      const currentData = historicalPrices[currentPriceIndex];
+      const nextData = getRandomPricePoint(); // Get random next point for more variation
       
-      const change = (Math.random() - 0.5) * volatilityFactor
-      const newPrice = currentPrice * (1 + change)
-      setCurrentPrice(newPrice)
-      setPriceHistory(prev => [...prev.slice(-100), newPrice])
+      // Calculate price change with volume and volatility factors
+      const priceChange = calculatePriceChange(currentData, nextData);
+      const newPrice = currentPrice * (1 + priceChange);
       
-      // Update market condition
-      if (priceHistory.length > 10) {
-        const recentPrices = priceHistory.slice(-10)
-        const avgPrice = recentPrices.reduce((a, b) => a + b, 0) / recentPrices.length
-        if (newPrice > avgPrice * 1.02) {
-          setMarketCondition('BULLISH')
-        } else if (newPrice < avgPrice * 0.98) {
-          setMarketCondition('BEARISH')
-        } else {
-          setMarketCondition('NEUTRAL')
-        }
+      // Update price and related states
+      setCurrentPrice(newPrice);
+      setPriceHistory(prev => [...prev.slice(-100), newPrice]);
+      setCurrentPriceIndex((currentPriceIndex + 1) % historicalPrices.length);
+      
+      // Calculate volatility based on historical data and volume
+      const volatilityFactor = Math.abs((nextData.high - nextData.low) / nextData.low) * 
+                              (Math.log(nextData.volume) / Math.log(currentData.volume));
+      setVolatility(volatilityFactor);
+      
+      // Update market condition based on historical trend and volume
+      const recentPrices = priceHistory.slice(-10);
+      const avgPrice = recentPrices.reduce((a, b) => a + b, 0) / recentPrices.length;
+      const volumeStrength = nextData.volume / currentData.volume;
+      
+      if (newPrice > avgPrice * (1 + 0.02 * volumeStrength)) {
+        setMarketCondition('BULLISH');
+      } else if (newPrice < avgPrice * (1 - 0.02 * volumeStrength)) {
+        setMarketCondition('BEARISH');
+      } else {
+        setMarketCondition('NEUTRAL');
       }
 
-      // Execute trades based on strategy
-      if (Math.random() < 0.3) { // 30% chance of trade
-        const isBuy = Math.random() > 0.5
-        const amount = tradeState.amount * (Math.random() * 0.2 + 0.1) // 10-30% of total amount
-        const profitLoss = isBuy ? -amount * newPrice : amount * newPrice
+      // Execute trades based on strategy, market conditions, and volume
+      if (Math.random() < 0.3 * volumeStrength) { // Trade probability affected by volume
+        const shouldBuy = (marketCondition === 'BULLISH' && volumeStrength > 1) || 
+                         (marketCondition === 'NEUTRAL' && Math.random() > 0.5);
         
-        setTotalProfitLoss(prev => prev + profitLoss)
-        setRecentProfitLoss(profitLoss)
-
-        toast({
-          title: `${isBuy ? 'Buy' : 'Sell'} Order Executed`,
-          description: `${isBuy ? 'Bought' : 'Sold'} ${amount.toFixed(4)} ${tradeState.selectedToken} @ $${newPrice.toFixed(4)}`,
-          status: isBuy ? 'success' : 'warning',
-          duration: 3000,
-          isClosable: true,
-        })
+        // Calculate trade amount based on volume and volatility
+        const baseAmount = tradeState.amount * (Math.random() * 0.2 + 0.1);
+        const adjustedAmount = baseAmount * Math.min(volumeStrength, 2);
+        
+        // Execute the trade with volume-adjusted amount
+        executeOrder(
+          shouldBuy ? 'BUY' : 'SELL',
+          adjustedAmount,
+          newPrice,
+          `${currentStrategy} ${shouldBuy ? 'buy' : 'sell'} signal (Volume: ${volumeStrength.toFixed(2)}x)`
+        );
       }
-    }, 1000)
+    }, 1000);
 
-    return () => clearInterval(priceInterval)
-  }, [isActive, currentPrice, priceHistory, tradeState])
+    return () => clearInterval(priceInterval);
+  }, [isActive, currentPrice, currentPriceIndex, priceHistory, tradeState, marketCondition]);
 
   // Execute trading strategies
   useInterval(() => {
