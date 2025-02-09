@@ -3,6 +3,17 @@
 import { Send } from 'lucide-react'
 import { useState, KeyboardEvent, ChangeEvent, useEffect } from 'react'
 import { Message } from '@/types'
+import {
+  Box,
+  Flex,
+  Text,
+  Input,
+  Button,
+  VStack,
+  Heading,
+  Container,
+  Icon,
+} from '@chakra-ui/react'
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('en-US', {
@@ -15,6 +26,10 @@ function formatTime(date: Date): string {
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
+
+  const bgColor = 'gray.800'
+  const borderColor = 'gray.700'
+  const inputBg = 'whiteAlpha.100'
 
   useEffect(() => {
     // Set initial message after component mounts to avoid hydration issues
@@ -64,58 +79,73 @@ const ChatInterface = () => {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <Flex direction="column" h="full">
       {/* Chat Header */}
-      <div className="border-b border-gray-700 p-4">
-        <h2 className="text-xl font-bold">Trading Assistant</h2>
-        <p className="text-sm text-gray-400">Ask me anything about trading</p>
-      </div>
+      <Box borderBottom="1px" borderColor={borderColor} p={4}>
+        <Heading size="lg">Trading Assistant</Heading>
+        <Text fontSize="sm" color="gray.400">Ask me anything about trading</Text>
+      </Box>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <VStack
+        flex="1"
+        overflowY="auto"
+        p={4}
+        align="stretch"
+        gap={4}
+      >
         {messages.map((message) => (
-          <div
+          <Flex
             key={message.id}
-            className={`flex ${
-              message.sender === 'user' ? 'justify-end' : 'justify-start'
-            }`}
+            justify={message.sender === 'user' ? 'flex-end' : 'flex-start'}
           >
-            <div
-              className={`max-w-[70%] rounded-lg px-4 py-2 ${
-                message.sender === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 text-white'
-              }`}
+            <Box
+              maxW="70%"
+              rounded="lg"
+              px={4}
+              py={2}
+              bg={message.sender === 'user' ? 'blue.600' : bgColor}
+              color="white"
             >
-              <p>{message.content}</p>
-              <span className="text-xs text-gray-400 mt-1 block">
+              <Text>{message.content}</Text>
+              <Text fontSize="xs" color="gray.400" mt={1}>
                 {formatTime(message.timestamp)}
-              </span>
-            </div>
-          </div>
+              </Text>
+            </Box>
+          </Flex>
         ))}
-      </div>
+      </VStack>
 
       {/* Chat Input */}
-      <div className="border-t border-gray-700 p-4">
-        <div className="flex space-x-4">
-          <input
-            type="text"
+      <Box borderTop="1px" borderColor={borderColor} p={4}>
+        <Flex gap={4}>
+          <Input
             value={input}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             placeholder="Type your message..."
-            className="flex-1 bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-400"
+            bg={inputBg}
+            border="1px"
+            borderColor={borderColor}
+            _focus={{
+              outline: 'none',
+              ring: 2,
+              ringColor: 'blue.500',
+            }}
+            color="white"
+            _placeholder={{ color: 'gray.400' }}
           />
-          <button
+          <Button
+            aria-label="Send message"
             onClick={handleSend}
-            className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-colors"
+            colorScheme="blue"
+            p={2}
           >
-            <Send className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-    </div>
+            <Icon as={Send} boxSize={5} />
+          </Button>
+        </Flex>
+      </Box>
+    </Flex>
   )
 }
 

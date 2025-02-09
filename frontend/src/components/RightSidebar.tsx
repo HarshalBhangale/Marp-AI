@@ -1,74 +1,96 @@
 'use client'
 
-import { ArrowUpRight, ArrowDownRight, User } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, User } from 'lucide-react'
+import {
+  Box,
+  VStack,
+  Text,
+  Flex,
+  Grid,
+  Icon,
+  Heading,
+  Circle,
+} from '@chakra-ui/react'
 
 const RightSidebar = () => {
+  const bgColor = 'whiteAlpha.50'
+  const cardBg = 'whiteAlpha.100'
+  const statBg = 'whiteAlpha.200'
+
   return (
-    <div className="w-80 bg-gray-900/50 backdrop-blur-sm border-l border-gray-700 p-4 overflow-y-auto">
-      <div className="space-y-6">
+    <Box
+      w="80"
+      bg={bgColor}
+      backdropFilter="blur(8px)"
+      borderLeft="1px"
+      borderColor="gray.700"
+      p={4}
+      overflowY="auto"
+    >
+      <VStack spacing={6} align="stretch">
         {/* Account Section */}
-        <div className="bg-gray-800/50 rounded-lg p-4">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="bg-gray-700 p-2 rounded-full">
-              <User className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="text-sm text-gray-400">Connected Wallet</div>
-              <div className="font-medium">0x075e...70ea</div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-700/50 rounded-lg p-3">
-              <div className="text-sm text-gray-400">Balance</div>
-              <div className="font-bold">2.45 ETH</div>
-            </div>
-            <div className="bg-gray-700/50 rounded-lg p-3">
-              <div className="text-sm text-gray-400">Value</div>
-              <div className="font-bold">$7,012.59</div>
-            </div>
-          </div>
-        </div>
+        <Box bg={cardBg} rounded="lg" p={4}>
+          <Flex align="center" gap={3} mb={4}>
+            <Circle size="40px" bg="gray.700">
+              <Icon as={User} boxSize={6} />
+            </Circle>
+            <Box>
+              <Text fontSize="sm" color="gray.400">Connected Wallet</Text>
+              <Text fontWeight="medium">0x075e...70ea</Text>
+            </Box>
+          </Flex>
+          <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+            <Box bg={statBg} rounded="lg" p={3}>
+              <Text fontSize="sm" color="gray.400">Balance</Text>
+              <Text fontWeight="bold">2.45 ETH</Text>
+            </Box>
+            <Box bg={statBg} rounded="lg" p={3}>
+              <Text fontSize="sm" color="gray.400">Value</Text>
+              <Text fontWeight="bold">$7,012.59</Text>
+            </Box>
+          </Grid>
+        </Box>
 
         {/* Transaction History */}
-        <div>
-          <h2 className="text-xl font-bold mb-4">Recent Transactions</h2>
-          <div className="space-y-3">
-            <div className="bg-gray-800/50 rounded-lg p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center">
-                  <ArrowUpRight className="h-5 w-5 text-green-400 mr-2" />
-                  <div>
-                    <div className="font-medium">Bought ETH</div>
-                    <div className="text-sm text-gray-400">Today, 2:45 PM</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">+1.5 ETH</div>
-                  <div className="text-sm text-gray-400">$4,281.75</div>
-                </div>
-              </div>
-            </div>
+        <Box>
+          <Heading size="lg" mb={4}>Recent Transactions</Heading>
+          <VStack spacing={3} align="stretch">
+            <Box bg={cardBg} rounded="lg" p={4}>
+              <Flex justify="space-between" align="start" mb={2}>
+                <Flex align="center">
+                  <Icon as={ArrowUpRight} color="green.400" boxSize={5} mr={2} />
+                  <Box>
+                    <Text fontWeight="medium">Bought ETH</Text>
+                    <Text fontSize="sm" color="gray.400">Today, 2:45 PM</Text>
+                  </Box>
+                </Flex>
+                <Box textAlign="right">
+                  <Text fontWeight="medium">+1.5 ETH</Text>
+                  <Text fontSize="sm" color="gray.400">$4,281.75</Text>
+                </Box>
+              </Flex>
+            </Box>
 
-            <div className="bg-gray-800/50 rounded-lg p-4">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center">
-                  <ArrowDownRight className="h-5 w-5 text-red-400 mr-2" />
-                  <div>
-                    <div className="font-medium">Sold BTC</div>
-                    <div className="text-sm text-gray-400">Yesterday, 6:12 PM</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">-0.25 BTC</div>
-                  <div className="text-sm text-gray-400">$12,058.55</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+            <Box bg={cardBg} rounded="lg" p={4}>
+              <Flex justify="space-between" align="start">
+                <Flex align="center">
+                  <Icon as={ArrowDownRight} color="red.400" boxSize={5} mr={2} />
+                  <Box>
+                    <Text fontWeight="medium">Sold BTC</Text>
+                    <Text fontSize="sm" color="gray.400">Yesterday, 6:12 PM</Text>
+                  </Box>
+                </Flex>
+                <Box textAlign="right">
+                  <Text fontWeight="medium">-0.25 BTC</Text>
+                  <Text fontSize="sm" color="gray.400">$12,058.55</Text>
+                </Box>
+              </Flex>
+            </Box>
+          </VStack>
+        </Box>
+      </VStack>
+    </Box>
+  )
+}
 
-export default RightSidebar; 
+export default RightSidebar 

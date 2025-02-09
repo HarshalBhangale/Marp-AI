@@ -1,34 +1,51 @@
-@import "tailwindcss";
-
-@layer base {
-  :root {
-    --background: 0 0 0;
-    --foreground: 255 255 255;
-  }
-
-  body {
-    @apply min-h-screen bg-[#111827] text-white;
-  }
+:root {
+  --background: rgb(0, 0, 0);
+  --foreground: rgb(255, 255, 255);
 }
 
-@layer components {
-  .glass-panel {
-    @apply bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-lg;
-  }
-  
-  .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors;
-  }
+body {
+  min-height: 100vh;
+  background-color: #111827;
+  color: white;
+}
 
-  .btn-primary {
-    @apply btn bg-blue-600 hover:bg-blue-700 text-white;
-  }
-  
-  .btn-success {
-    @apply btn bg-green-600 hover:bg-green-700 text-white;
-  }
-  
-  .btn-danger {
-    @apply btn bg-red-600 hover:bg-red-700 text-white;
-  }
+.glass-panel {
+  background-color: rgba(17, 24, 39, 0.5);
+  backdrop-filter: blur(4px);
+  border: 1px solid #374151;
+  border-radius: 0.5rem;
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-success {
+  background-color: #059669;
+  color: white;
+}
+
+.btn-success:hover {
+  background-color: #047857;
+}
+
+.btn-danger {
+  background-color: #dc2626;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
 }

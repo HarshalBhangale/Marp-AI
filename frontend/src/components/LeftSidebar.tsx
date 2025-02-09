@@ -3,6 +3,18 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { MessageSquare, Library, BarChart2, TrendingUp, TrendingDown } from 'lucide-react'
+import {
+  Box,
+  VStack,
+  Heading,
+  Text,
+  Button,
+  Flex,
+  Icon,
+  Grid,
+  GridItem,
+  useColorModeValue,
+} from '@chakra-ui/react'
 
 const navigation = [
   { name: 'Chat', href: '/', icon: MessageSquare },
@@ -11,63 +23,84 @@ const navigation = [
 ]
 
 const LeftSidebar = () => {
+  const bgColor = 'whiteAlpha.50'
+  const cardBg = 'whiteAlpha.100'
+
   return (
-    <div className="w-80 bg-gray-900/50 backdrop-blur-sm border-r border-gray-700 p-4 overflow-y-auto">
-      <div className="space-y-6">
+    <Box
+      w="80"
+      bg={bgColor}
+      backdropFilter="blur(8px)"
+      borderRight="1px"
+      borderColor="gray.700"
+      p={4}
+      overflowY="auto"
+    >
+      <VStack spacing={6} align="stretch">
         {/* Market Overview Section */}
-        <div>
-          <h2 className="text-xl font-bold mb-4">Market Overview</h2>
+        <Box>
+          <Heading size="lg" mb={4}>Market Overview</Heading>
           
           {/* Bitcoin Card */}
-          <div className="bg-gray-800/50 rounded-lg p-4 mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-medium">Bitcoin</span>
-              <span className="text-sm text-gray-400">BTC</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-bold">$48,234.21</span>
-              <div className="flex items-center text-green-400">
-                <TrendingUp size={16} className="mr-1" />
-                <span>+2.4%</span>
-              </div>
-            </div>
-          </div>
+          <Box bg={cardBg} rounded="lg" p={4} mb={4}>
+            <Flex justify="space-between" align="center" mb={2}>
+              <Text fontWeight="medium">Bitcoin</Text>
+              <Text fontSize="sm" color="gray.400">BTC</Text>
+            </Flex>
+            <Flex justify="space-between" align="center">
+              <Text fontSize="lg" fontWeight="bold">$48,234.21</Text>
+              <Flex align="center" color="green.400">
+                <Icon as={TrendingUp} boxSize={4} mr={1} />
+                <Text>+2.4%</Text>
+              </Flex>
+            </Flex>
+          </Box>
 
           {/* Ethereum Card */}
-          <div className="bg-gray-800/50 rounded-lg p-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-medium">Ethereum</span>
-              <span className="text-sm text-gray-400">ETH</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-bold">$2,854.12</span>
-              <div className="flex items-center text-red-400">
-                <TrendingDown size={16} className="mr-1" />
-                <span>-0.8%</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          <Box bg={cardBg} rounded="lg" p={4}>
+            <Flex justify="space-between" align="center" mb={2}>
+              <Text fontWeight="medium">Ethereum</Text>
+              <Text fontSize="sm" color="gray.400">ETH</Text>
+            </Flex>
+            <Flex justify="space-between" align="center">
+              <Text fontSize="lg" fontWeight="bold">$2,854.12</Text>
+              <Flex align="center" color="red.400">
+                <Icon as={TrendingDown} boxSize={4} mr={1} />
+                <Text>-0.8%</Text>
+              </Flex>
+            </Flex>
+          </Box>
+        </Box>
 
         {/* Quick Actions Section */}
-        <div>
-          <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-          <div className="space-y-3">
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+        <Box>
+          <Heading size="lg" mb={4}>Quick Actions</Heading>
+          <VStack spacing={3}>
+            <Button
+              w="full"
+              colorScheme="blue"
+              fontWeight="medium"
+            >
               Connect Wallet
-            </button>
-            <div className="grid grid-cols-2 gap-3">
-              <button className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+            </Button>
+            <Grid templateColumns="repeat(2, 1fr)" gap={3} w="full">
+              <Button
+                colorScheme="green"
+                fontWeight="medium"
+              >
                 Buy
-              </button>
-              <button className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+              </Button>
+              <Button
+                colorScheme="red"
+                fontWeight="medium"
+              >
                 Sell
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+              </Button>
+            </Grid>
+          </VStack>
+        </Box>
+      </VStack>
+    </Box>
   )
 }
 

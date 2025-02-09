@@ -1,5 +1,5 @@
 import { Inter } from 'next/font/google'
-import './globals.css'
+import { Providers } from './providers'
 import { StarknetProvider } from '@/components/starknet-provider'
 import Navbar from '@/components/Navbar'
 
@@ -17,15 +17,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white min-h-screen`}>
-        <StarknetProvider>
-          <div className="flex flex-col min-h-screen">
-            <Navbar />
-            <div className="flex-1 pt-16">
-              {children}
+      <body className={inter.className}>
+        <Providers>
+          <StarknetProvider>
+            <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+              <Navbar />
+              <div style={{ flex: 1, paddingTop: '4rem' }}>
+                {children}
+              </div>
             </div>
-          </div>
-        </StarknetProvider>
+          </StarknetProvider>
+        </Providers>
       </body>
     </html>
   )
