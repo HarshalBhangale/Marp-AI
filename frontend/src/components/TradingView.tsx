@@ -88,8 +88,8 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
   const [sessionTime, setSessionTime] = useState(60)
   const [isActive, setIsActive] = useState(true)
   const [marketCondition, setMarketCondition] = useState<'BULLISH' | 'BEARISH' | 'NEUTRAL'>('NEUTRAL')
-  const [currentPrice, setCurrentPrice] = useState(4500)
-  const [priceHistory, setPriceHistory] = useState<number[]>([4500])
+  const [currentPrice, setCurrentPrice] = useState(0.2363)
+  const [priceHistory, setPriceHistory] = useState<number[]>([0.2363])
   const toast = useToast()
 
   // Strategy parameters
@@ -100,10 +100,10 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
       lastBuy: 0,
     },
     grid: {
-      upperBound: 4600,
-      lowerBound: 4400,
+      upperBound: 0.2463, // ~4% above initial price
+      lowerBound: 0.2263, // ~4% below initial price
       gridLines: 5,
-      gridSpacing: 50,
+      gridSpacing: 0.005, // 0.005 USDC spacing between grid lines
     },
     momentum: {
       lookbackPeriod: 10,
@@ -181,7 +181,7 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
 
         toast({
           title: `${isBuy ? 'Buy' : 'Sell'} Order Executed`,
-          description: `${isBuy ? 'Bought' : 'Sold'} ${amount.toFixed(4)} ${tradeState.selectedToken} @ $${newPrice.toFixed(2)}`,
+          description: `${isBuy ? 'Bought' : 'Sold'} ${amount.toFixed(4)} ${tradeState.selectedToken} @ $${newPrice.toFixed(4)}`,
           status: isBuy ? 'success' : 'warning',
           duration: 3000,
           isClosable: true,
@@ -301,7 +301,7 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
 
     toast({
       title: `${type} Order Executed`,
-      description: `${type === 'BUY' ? 'Bought' : 'Sold'} ${amount.toFixed(4)} ${tradeState.selectedToken} @ $${price.toFixed(2)}`,
+      description: `${type === 'BUY' ? 'Bought' : 'Sold'} ${amount.toFixed(4)} ${tradeState.selectedToken} @ $${price.toFixed(4)}`,
       status: type === 'BUY' ? 'success' : 'warning',
       duration: 3000,
       isClosable: true,
@@ -387,7 +387,7 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
           color: 'rgba(59, 130, 246, 0.5)',
           lineWidth: 1,
           lineStyle: 2,
-          title: `Grid ${price.toFixed(2)}`,
+          title: `Grid ${price.toFixed(4)}`,
         })
         gridLine.setData(priceHistory.map((_, index) => ({
           time: (baseTime - (priceHistory.length - index)) as Time,
@@ -490,26 +490,93 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
             </Alert>
 
             {/* Current Price */}
-            <Stat>
-              <StatLabel>Current Price</StatLabel>
-              <StatNumber>${currentPrice.toFixed(2)}</StatNumber>
-              <StatHelpText>
-                <StatArrow type={recentProfitLoss >= 0 ? 'increase' : 'decrease'} />
-                {(volatility * 100).toFixed(2)}% Volatility
-              </StatHelpText>
-            </Stat>
+            <Box 
+              bg="whiteAlpha.100" 
+              p={4} 
+              rounded="xl" 
+              borderWidth="1px" 
+              borderColor="whiteAlpha.200"
+              w="100%"
+            >
+              <Flex justify="space-between" align="center" mb={2}>
+                <HStack>
+                  <Icon as={DollarSign} color="blue.400" boxSize={5} />
+                  <Text fontSize="sm" color="gray.400">Current Price</Text>
+                </HStack>
+                <Badge 
+                  colorScheme={recentProfitLoss >= 0 ? 'green' : 'red'}
+                  variant="subtle"
+                  px={2}
+                  py={1}
+                  rounded="md"
+                >
+                  {(volatility * 100).toFixed(2)}% Volatility
+                </Badge>
+              </Flex>
+              <Heading size="2xl" bgGradient="linear(to-r, blue.400, purple.400)" bgClip="text">
+                ${currentPrice.toFixed(4)}
+              </Heading>
+              <Text fontSize="sm" color="gray.400" mt={1}>
+                STRK/USDC
+              </Text>
+            </Box>
 
             {/* Total P/L */}
-            <Stat>
-              <StatLabel>Total Profit/Loss</StatLabel>
-              <StatNumber color={totalProfitLoss >= 0 ? 'green.400' : 'red.400'}>
-                ${Math.abs(totalProfitLoss).toFixed(2)}
-              </StatNumber>
-              <StatHelpText>
-                <StatArrow type={totalProfitLoss >= 0 ? 'increase' : 'decrease'} />
-                {((totalProfitLoss / (tradeState.amount * currentPrice)) * 100).toFixed(2)}%
-              </StatHelpText>
-            </Stat>
+            <Box 
+              bg="whiteAlpha.100" 
+              p={4} 
+              rounded="xl" 
+              borderWidth="1px" 
+              borderColor={totalProfitLoss >= 0 ? 'green.400' : 'red.400'}
+              w="100%"
+              position="relative"
+              overflow="hidden"
+            >
+              <Box
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                bg={totalProfitLoss >= 0 ? 'green.400' : 'red.400'}
+                opacity={0.1}
+              />
+              <Flex justify="space-between" align="center" mb={2}>
+                <HStack>
+                  <Icon 
+                    as={totalProfitLoss >= 0 ? TrendingUp : TrendingDown} 
+                    color={totalProfitLoss >= 0 ? 'green.400' : 'red.400'} 
+                    boxSize={5} 
+                  />
+                  <Text fontSize="sm" color="gray.400">Total Profit/Loss</Text>
+                </HStack>
+                <Badge 
+                  colorScheme={totalProfitLoss >= 0 ? 'green' : 'red'}
+                  variant="solid"
+                  px={2}
+                  py={1}
+                  rounded="md"
+                >
+                  {((totalProfitLoss / (tradeState.amount * currentPrice)) * 100).toFixed(2)}%
+                </Badge>
+              </Flex>
+              <Heading 
+                size="2xl" 
+                color={totalProfitLoss >= 0 ? 'green.400' : 'red.400'}
+                display="flex"
+                alignItems="center"
+                gap={2}
+              >
+                <Icon 
+                  as={totalProfitLoss >= 0 ? TrendingUp : TrendingDown} 
+                  color={totalProfitLoss >= 0 ? 'green.400' : 'red.400'} 
+                />
+                ${Math.abs(totalProfitLoss).toFixed(4)}
+              </Heading>
+              <Text fontSize="sm" color="gray.400" mt={1}>
+                Session {isActive ? 'Active' : 'Ended'}
+              </Text>
+            </Box>
 
             {/* Strategy Info */}
             <VStack align="stretch" w="100%" spacing={3}>
@@ -586,7 +653,7 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
                           {trade.amount.toFixed(4)} {tradeState.selectedToken}
                         </Text>
                         <Text fontSize="sm" color="gray.300">
-                          @ ${trade.price.toFixed(2)}
+                          @ ${trade.price.toFixed(4)}
                         </Text>
                       </VStack>
                     </Flex>
@@ -616,9 +683,9 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
                 )}
                 {currentStrategy === 'Grid Trading' && (
                   <VStack align="stretch" spacing={2}>
-                    <Text fontSize="sm">Upper: ${strategyParams.grid.upperBound.toFixed(2)}</Text>
-                    <Text fontSize="sm">Lower: ${strategyParams.grid.lowerBound.toFixed(2)}</Text>
-                    <Text fontSize="sm">Grid Size: ${strategyParams.grid.gridSpacing.toFixed(2)}</Text>
+                    <Text fontSize="sm">Upper: ${strategyParams.grid.upperBound.toFixed(4)}</Text>
+                    <Text fontSize="sm">Lower: ${strategyParams.grid.lowerBound.toFixed(4)}</Text>
+                    <Text fontSize="sm">Grid Size: ${strategyParams.grid.gridSpacing.toFixed(4)}</Text>
                   </VStack>
                 )}
                 {currentStrategy === 'Momentum' && (
