@@ -13,7 +13,7 @@ export default function Library() {
             <h2 className="text-xl font-semibold mb-4">Trading Strategies</h2>
             <ul className="space-y-3">
               <li className="flex items-center text-blue-400 hover:text-blue-300 cursor-pointer">
-                <span className="mr-2">📊</span>
+                <span className="mr-2">  </span>
                 Technical Analysis Basics
               </li>
               <li className="flex items-center text-blue-400 hover:text-blue-300 cursor-pointer">
@@ -40,7 +40,7 @@ export default function Library() {
                 News Impact Analysis
               </li>
               <li className="flex items-center text-blue-400 hover:text-blue-300 cursor-pointer">
-                <span className="mr-2">📊</span>
+                <span className="mr-2">  </span>
                 Market Indicators
               </li>
             </ul>
