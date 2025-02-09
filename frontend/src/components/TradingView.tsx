@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createChart, ColorType, CrosshairMode, Time } from 'lightweight-charts'
-import type { IChartApi, DeepPartial, ChartOptions, SeriesOptionsCommon, ISeriesApi, LineData, CandlestickData } from 'lightweight-charts'
+import type { IChartApi, DeepPartial, ChartOptions, SeriesOptionsCommon, ISeriesApi, LineData, CandlestickData, SeriesMarkerPosition, SeriesMarkerShape } from 'lightweight-charts'
 import {
   Box,
   Flex,
@@ -138,6 +138,9 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
   const [priceHistory, setPriceHistory] = useState<number[]>([historicalPrices[0].close])
   const [currentPriceIndex, setCurrentPriceIndex] = useState(0)
   const toast = useToast()
+  const lineSeries = useRef<ISeriesApi<'Line'> | null>(null)
+  const [chartData, setChartData] = useState<{ time: Time; value: number }[]>([])
+  const baseTime = useRef(Math.floor(Date.now() / 1000))
 
   // Strategy parameters
   const [strategyParams, setStrategyParams] = useState({
@@ -365,7 +368,7 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
     })
   }
 
-  // Initialize and update chart
+  // Initialize chart
   useEffect(() => {
     if (!chartContainerRef.current) return
 
@@ -383,85 +386,36 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
       },
       rightPriceScale: {
         borderColor: 'rgba(255, 255, 255, 0.1)',
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.1,
+        },
       },
       timeScale: {
         borderColor: 'rgba(255, 255, 255, 0.1)',
         timeVisible: true,
         secondsVisible: true,
+        tickMarkFormatter: (time: number) => {
+          const date = new Date(time * 1000);
+          return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        },
       },
     }
 
     chart.current = createChart(chartContainerRef.current, chartOptions)
-    const candleSeries = chart.current.addCandlestickSeries({
-      upColor: '#22c55e',
-      downColor: '#ef4444',
-      borderVisible: false,
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+    lineSeries.current = chart.current.addLineSeries({
+      color: '#3b82f6',
+      lineWidth: 2,
+      lastPriceAnimation: 1,
     })
 
-    // Add strategy markers
-    const markers: any[] = []
-    if (tradeSignals.length > 0) {
-      tradeSignals.forEach((signal) => {
-        markers.push({
-          time: signal.timestamp.getTime() / 1000 as Time,
-          position: signal.type === 'BUY' ? 'belowBar' : 'aboveBar',
-          color: signal.type === 'BUY' ? '#22c55e' : '#ef4444',
-          shape: signal.type === 'BUY' ? 'arrowUp' : 'arrowDown',
-          text: `${signal.type} - ${currentStrategy}`,
-        })
-      })
-      candleSeries.setMarkers(markers)
+    // Initial data point
+    const initialData = {
+      time: baseTime.current as Time,
+      value: currentPrice
     }
-
-    // Add price data
-    const baseTime = Math.floor(new Date().getTime() / 1000)
-    const priceData: CandlestickData[] = priceHistory.map((price, index) => ({
-      time: (baseTime - (priceHistory.length - index)) as Time,
-      open: price * 0.998,
-      high: price * 1.002,
-      low: price * 0.997,
-      close: price,
-    }))
-    candleSeries.setData(priceData)
-
-    // Add strategy-specific indicators
-    if (currentStrategy === 'DCA') {
-      const dcaLine = chart.current.addLineSeries({
-        color: '#3b82f6',
-        lineWidth: 2,
-        title: 'DCA Level',
-      })
-      dcaLine.setData(priceHistory.map((_, index) => ({
-        time: (baseTime - (priceHistory.length - index)) as Time,
-        value: strategyParams.dca.lastBuy,
-      })))
-    } else if (currentStrategy === 'Grid Trading') {
-      const { upperBound, lowerBound, gridSpacing } = strategyParams.grid
-      for (let price = lowerBound; price <= upperBound; price += gridSpacing) {
-        const gridLine = chart.current.addLineSeries({
-          color: 'rgba(59, 130, 246, 0.5)',
-          lineWidth: 1,
-          lineStyle: 2,
-          title: `Grid ${price.toFixed(4)}`,
-        })
-        gridLine.setData(priceHistory.map((_, index) => ({
-          time: (baseTime - (priceHistory.length - index)) as Time,
-          value: price,
-        })))
-      }
-    } else if (currentStrategy === 'Momentum') {
-      const momentumLine = chart.current.addLineSeries({
-        color: '#8b5cf6',
-        lineWidth: 2,
-        title: 'Momentum',
-      })
-      momentumLine.setData(priceHistory.map((price, index) => ({
-        time: (baseTime - (priceHistory.length - index)) as Time,
-        value: price * (1 + strategyParams.momentum.trendStrength),
-      })))
-    }
+    setChartData([initialData])
+    lineSeries.current.setData([initialData])
 
     // Resize handler
     const handleResize = () => {
@@ -474,6 +428,7 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
     }
 
     window.addEventListener('resize', handleResize)
+    handleResize()
 
     return () => {
       window.removeEventListener('resize', handleResize)
@@ -481,7 +436,37 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
         chart.current.remove()
       }
     }
-  }, [tradeSignals, currentStrategy, priceHistory, strategyParams])
+  }, [])
+
+  // Update price data
+  useEffect(() => {
+    if (!lineSeries.current || !isActive) return
+
+    const newData = {
+      time: (baseTime.current + (60 - sessionTime)) as Time,
+      value: currentPrice
+    }
+
+    setChartData(prev => [...prev, newData])
+    lineSeries.current.update(newData)
+
+    // Add trade markers if needed
+    if (tradeSignals.length > 0) {
+      const markers = tradeSignals.map(signal => ({
+        time: (baseTime.current + (60 - sessionTime)) as Time,
+        position: signal.type === 'BUY' ? 'belowBar' as SeriesMarkerPosition : 'aboveBar' as SeriesMarkerPosition,
+        color: signal.type === 'BUY' ? '#22c55e' : '#ef4444',
+        shape: signal.type === 'BUY' ? 'arrowUp' as SeriesMarkerShape : 'arrowDown' as SeriesMarkerShape,
+        text: signal.type,
+      }))
+      lineSeries.current.setMarkers(markers)
+    }
+
+    // Update chart viewport
+    if (chart.current) {
+      chart.current.timeScale().fitContent()
+    }
+  }, [currentPrice, tradeSignals, isActive, sessionTime])
 
   return (
     <Box h="80vh" p={4}>
