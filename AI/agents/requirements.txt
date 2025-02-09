@@ -1,0 +1,10 @@
+langchain-core
+langchain-openai
+langgraph
+cdp-langchain
+cdp
+pydantic
+twitter-langchain
+langchain-community
+duckduckgo-search
+python-dotenv
