@@ -308,49 +308,170 @@ const ChatInterface = () => {
   }, [messages])
 
   const handleTradeCommand = () => {
-    const tokenList = MARP_TRADES_KNOWLEDGE.tradingPairs
-      .map(token => `${token.symbol} - ${token.name}`)
-      .join('\n');
-
     const botResponse: Message = {
       id: messages.length + 2,
-      content: `Please select a token to trade on Starknet:\n\n${tokenList}\n\nJust type the symbol (e.g., "ETH") to select.`,
+      content: `Welcome to Marp Trades! Let's set up your trading bot.
+
+First, how much ETH would you like to deposit to start trading? (minimum 0.01 ETH)
+
+Example: Type "0.05" to deposit 0.05 ETH`,
       sender: 'bot',
       timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, botResponse]);
+  };
+
+  const handleAmount = async (amount: number) => {
+    if (amount < 0.01) {
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        content: `The minimum deposit amount is 0.01 ETH. Please enter a larger amount.`,
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
     }
-    setMessages(prev => [...prev, botResponse])
-  }
+
+    setTradeState(prev => ({ ...prev, amount }));
+    
+    const depositMessage: Message = {
+      id: messages.length + 2,
+      content: `Great! You're depositing ${amount} ETH.
+
+Select a trading pair:
+
+1. BTC-USDC
+   💰 Price: $65,432
+   📊 24h Volume: $1.2B
+   📈 24h Change: +2.5%
+   
+2. ETH-USDC
+   💰 Price: $3,456
+   📊 24h Volume: $800M
+   📈 24h Change: +1.8%
+   
+3. STRK-USDC
+   💰 Price: $4.32
+   📊 24h Volume: $50M
+   📈 24h Change: +5.2%
+
+Type 1, 2, or 3 to select your pair.`,
+      sender: 'bot',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, depositMessage]);
+  };
 
   const handleTokenSelection = (token: string) => {
-    setTradeState(prev => ({ ...prev, selectedToken: token }))
+    setTradeState(prev => ({ ...prev, selectedToken: token }));
     
-    const strategies = Object.values(MARP_TRADES_KNOWLEDGE.tradingStrategies)
-      .map((strategy, index) => 
-        `${index + 1}. ${strategy.name}\n   ${strategy.description}\n   Risk Level: ${strategy.riskLevel}`
-      );
-
     const botResponse: Message = {
       id: messages.length + 2,
-      content: `You've selected ${token} for trading on Starknet.\n\nPlease choose a trading strategy:\n\n${strategies.join('\n\n')}\n\nType the number (1-4) to select.`,
+      content: `Excellent choice! ${token}-USDC selected.
+
+Choose your trading strategy:
+
+1. 🤖 DCA (Dollar Cost Averaging)
+   • Low risk, steady growth
+   • Auto-buys every 24 hours
+   • Best for long-term gains
+   • AI optimized entry points
+   
+2. 📊 Grid Trading
+   • Medium risk, higher returns
+   • Auto-places buy/sell orders
+   • Profits from volatility
+   • Dynamic grid spacing
+   
+3. 📈 Momentum Trading
+   • High risk, maximum potential
+   • AI-powered trend detection
+   • Advanced technical analysis
+   • Real-time market signals
+
+Type 1, 2, or 3 to select your strategy.`,
       sender: 'bot',
       timestamp: new Date(),
-    }
-    setMessages(prev => [...prev, botResponse])
-  }
+    };
+    setMessages(prev => [...prev, botResponse]);
+  };
 
   const handleStrategySelection = (strategyNumber: number) => {
-    const strategies = Object.values(MARP_TRADES_KNOWLEDGE.tradingStrategies);
-    const strategy = strategies[strategyNumber - 1].name;
-    setTradeState(prev => ({ ...prev, strategy }))
+    const strategies = ['DCA', 'Grid Trading', 'Momentum'];
+    const riskLevels = ['LOW', 'MEDIUM', 'HIGH'];
+    const strategy = strategies[strategyNumber - 1];
+    const riskLevel = riskLevels[strategyNumber - 1];
+    
+    setTradeState(prev => ({ 
+      ...prev, 
+      strategy,
+      riskLevel,
+      isChartExpanded: true,
+      trades: [],
+      performance: {
+        averageEntry: 0,
+        totalProfit: 0,
+        totalFees: 0,
+        roi: 0,
+      }
+    }));
 
-    const botResponse: Message = {
+    const simulationMessage: Message = {
       id: messages.length + 2,
-      content: `Strategy selected: ${strategy}\n\nPlease specify your risk level for Starknet trading (Low/Medium/High):\n\nLOW - Conservative position sizing, tight stop losses\nMEDIUM - Balanced approach with moderate leverage\nHIGH - Aggressive position sizing, wider stops`,
+      content: `🚀 Trading bot initialized!
+
+✅ Deposit: ${tradeState.amount} ETH
+✅ Pair: ${tradeState.selectedToken}-USDC
+✅ Strategy: ${strategy}
+✅ Risk Level: ${riskLevel}
+
+🔄 Connecting to Starknet...
+⚡ Setting up ${strategy}...
+📊 Loading market data...
+
+Opening your live trading dashboard...`,
       sender: 'bot',
       timestamp: new Date(),
-    }
-    setMessages(prev => [...prev, botResponse])
-  }
+    };
+    setMessages(prev => [...prev, simulationMessage]);
+
+    // Open trading view modal and start simulation immediately
+    onOpen();
+    startTradeSimulation(strategyNumber);
+  };
+
+  const startTradeSimulation = (strategyNumber: number) => {
+    let tradeInterval = setInterval(() => {
+      const randomProfit = (Math.random() * 2 - 0.5) * (strategyNumber * 2);
+      const newTrade: TradingActivity = {
+        type: randomProfit > 0 ? 'BUY' : 'SELL',
+        price: 65000 + (Math.random() * 1000 - 500),
+        amount: Math.random() * 100,
+        timestamp: new Date(),
+        fees: Math.random() * 0.1,
+      };
+
+      setTradeState(prev => {
+        const newTrades = [...prev.trades, newTrade].slice(-10);
+        const totalProfit = newTrades.reduce((sum, trade) => 
+          sum + (trade.type === 'BUY' ? trade.amount : -trade.amount), 0);
+        
+        return {
+          ...prev,
+          trades: newTrades,
+          performance: {
+            averageEntry: 65000 + (Math.random() * 100 - 50),
+            totalProfit,
+            totalFees: prev.performance.totalFees + newTrade.fees,
+            roi: (totalProfit / (prev.amount || 1)) * 100,
+          }
+        };
+      });
+    }, 5000);
+
+    return () => clearInterval(tradeInterval);
+  };
 
   const handleRiskLevel = (risk: string) => {
     setTradeState(prev => ({ ...prev, riskLevel: risk }))
@@ -364,74 +485,56 @@ const ChatInterface = () => {
     setMessages(prev => [...prev, botResponse])
   }
 
-  const handleAmount = (amount: number) => {
-    setTradeState(prev => ({ 
-      ...prev, 
-      amount,
-      isChartExpanded: true,
-      trades: [
-        {
-          type: 'BUY',
-          price: 65000,
-          amount: amount * 0.3,
+  const handleConfirmDeposit = async (amount: number) => {
+    try {
+      const depositingMessage: Message = {
+        id: messages.length + 2,
+        content: `🔄 Initiating deposit to Starknet trading contract...
+
+1. Approving ETH spend...
+2. Waiting for confirmation...`,
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, depositingMessage]);
+
+      // Simulate contract interaction
+      setTimeout(() => {
+        const successMessage: Message = {
+          id: messages.length + 3,
+          content: `✅ Deposit successful! 
+✅ Contract approved
+✅ Funds received
+
+Your trading bot is now being initialized with:
+• Deposit: ${amount} ETH
+• Trading Pair: ${tradeState.selectedToken}-USDC
+• Strategy: ${tradeState.strategy}
+
+Starting automated trading in 3... 2... 1...`,
+          sender: 'bot',
           timestamp: new Date(),
-          fees: amount * 0.0001, // Lower fees on Starknet
-        },
-        {
-          type: 'BUY',
-          price: 64000,
-          amount: amount * 0.4,
-          timestamp: new Date(Date.now() - 3600000),
-          fees: amount * 0.0001,
-        },
-        {
-          type: 'SELL',
-          price: 66000,
-          amount: amount * 0.2,
-          timestamp: new Date(Date.now() - 7200000),
-          fees: amount * 0.0001,
-        },
-      ],
-      performance: {
-        averageEntry: 64500,
-        totalProfit: amount * 0.05,
-        totalFees: amount * 0.0003, // Accumulated Starknet fees
-        roi: 5,
-      }
-    }))
+        };
+        setMessages(prev => [...prev, successMessage]);
+        
+        // Start the trading simulation after a brief delay
+        setTimeout(() => {
+          startTradeSimulation(tradeState.strategy === 'Momentum' ? 3 : 
+                             tradeState.strategy === 'Grid' ? 2 : 1);
+          onOpen();
+        }, 2000);
+      }, 2000);
 
-    const botResponse: Message = {
-      id: messages.length + 2,
-      content: `Perfect! I've initiated the Starknet trading strategy with $${amount} USDC. I'll now show you the trading dashboard with real-time updates from Starknet DEXs. Your trades will be executed with minimal fees and maximum security.`,
-      sender: 'bot',
-      timestamp: new Date(),
-    }
-    setMessages(prev => [...prev, botResponse])
-    onOpen()
-  }
+    } catch (error: any) {
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        content: `❌ Error: Could not process deposit. Please try again or contact support.
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
-
-    const userMessage: Message = {
-      id: messages.length + 1,
-      content: input,
-      sender: 'user',
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-
-    // Check if input is a trading command
-    const lowerInput = input.toLowerCase();
-    if (lowerInput === 'trade') {
-      handleTradeCommand();
-    } else if (lowerInput.startsWith('swap')) {
-      handleSwapCommand(input);
-    } else {
-      // If not a trading command, treat as a knowledge base query
-      await handleKnowledgeQuery(input);
+Error details: ${error?.message || 'Unknown error'}`,
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
   };
 
@@ -526,6 +629,64 @@ const ChatInterface = () => {
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value)
   }
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMessage: Message = {
+      id: messages.length + 1,
+      content: input,
+      sender: 'user',
+      timestamp: new Date(),
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    const currentInput = input;
+    setInput('');
+
+    const lowerInput = currentInput.toLowerCase();
+    
+    // Handle trade command
+    if (lowerInput === 'trade') {
+      handleTradeCommand();
+      return;
+    }
+
+    // Handle amount input (number with up to 4 decimals)
+    const amountMatch = lowerInput.match(/^\d*\.?\d+$/);
+    if (amountMatch && !tradeState.amount) {
+      const amount = parseFloat(lowerInput);
+      handleAmount(amount);
+      return;
+    }
+
+    // Handle token pair selection (1-3)
+    if (['1', '2', '3'].includes(lowerInput)) {
+      const selection = parseInt(lowerInput);
+      
+      if (tradeState.amount && !tradeState.selectedToken) {
+        // Handle token selection
+        const tokenPairs = ['BTC', 'ETH', 'STRK'];
+        handleTokenSelection(tokenPairs[selection - 1]);
+        return;
+      } else if (tradeState.amount && tradeState.selectedToken && !tradeState.strategy) {
+        // Handle strategy selection
+        handleStrategySelection(selection);
+        return;
+      }
+    }
+
+    // Handle swap command
+    if (lowerInput.startsWith('swap')) {
+      handleSwapCommand(currentInput);
+      return;
+    }
+
+    // Only query knowledge base for non-trading commands
+    if (!tradeState.amount && !tradeState.selectedToken) {
+      await handleKnowledgeQuery(currentInput);
+    }
+  };
 
   return (
     <Flex direction="column" h="calc(100vh - 4rem)" position="relative" overflow="hidden" bg="gray.900">
