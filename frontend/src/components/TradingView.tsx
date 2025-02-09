@@ -1,6 +1,8 @@
+'use client'
+
 import { useEffect, useRef, useState } from 'react'
-import { createChart } from 'lightweight-charts'
-import type { IChartApi, DeepPartial, ChartOptions, SeriesOptionsCommon } from 'lightweight-charts'
+import { createChart, ColorType, CrosshairMode, Time } from 'lightweight-charts'
+import type { IChartApi, DeepPartial, ChartOptions, SeriesOptionsCommon, ISeriesApi, LineData, CandlestickData } from 'lightweight-charts'
 import {
   Box,
   Flex,
@@ -32,550 +34,561 @@ import {
   MenuItem,
   Circle,
   useColorModeValue,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+  useToast,
+  Progress,
 } from '@chakra-ui/react'
 import { 
   Activity, 
   TrendingUp, 
+  TrendingDown, 
   DollarSign, 
   Clock, 
   AlertCircle, 
   ChevronDown,
   MessageCircle,
   Brain,
-  TrendingDown,
   Target,
-  BarChart2
+  BarChart2,
+  RefreshCw,
+  Timer,
+  AlertTriangle,
 } from 'lucide-react'
 import { TradeState } from '@/types'
-import { useKlines, useLatestPrice } from '@/services/priceService'
 import useInterval from '@/hooks/useInterval'
 
 interface TradingViewProps {
   tradeState: TradeState
 }
 
-interface AIPrediction {
-  type: 'SUPPORT' | 'RESISTANCE' | 'TREND'
-  level?: number
-  direction?: string
-  confidence: number
-  timeframe: string
-}
-
-interface NewsItem {
-  source: string
-  title: string
-  time: string
-  sentiment: 'positive' | 'negative' | 'neutral'
-}
-
-interface CandleData {
-  time: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-
-interface CandleDataFormatted {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-}
-
 interface TradeSignal {
-  timestamp: Date;
-  action: 'BUY' | 'SELL' | 'HOLD';
-  price: number;
-  reason: string;
+  type: 'BUY' | 'SELL'
+  amount: number
+  price: number
+  timestamp: Date
+  fees: number
+  reason: string
 }
 
 const TradingView = ({ tradeState }: TradingViewProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chart = useRef<IChartApi | null>(null)
-  const [timeframe, setTimeframe] = useState('1h')
-  const { data: klineData, isLoading: isLoadingKlines } = useKlines(tradeState.selectedToken, timeframe)
-  const { data: latestPrice } = useLatestPrice(tradeState.selectedToken)
+  const [timeframe, setTimeframe] = useState('1m')
   const [tradeSignals, setTradeSignals] = useState<TradeSignal[]>([])
-  const [latestSignal, setLatestSignal] = useState<TradeSignal | null>(null)
+  const [currentStrategy, setCurrentStrategy] = useState(tradeState.strategy)
+  const [isChangingStrategy, setIsChangingStrategy] = useState(false)
+  const [consecutiveLosses, setConsecutiveLosses] = useState(0)
+  const [profitLossThreshold] = useState(-100)
+  const [recentProfitLoss, setRecentProfitLoss] = useState(0)
+  const [totalProfitLoss, setTotalProfitLoss] = useState(0)
+  const [volatility, setVolatility] = useState(0)
+  const [sessionTime, setSessionTime] = useState(0)
+  const [isActive, setIsActive] = useState(true)
+  const [marketCondition, setMarketCondition] = useState<'BULLISH' | 'BEARISH' | 'NEUTRAL'>('NEUTRAL')
+  const [currentPrice, setCurrentPrice] = useState(4500)
+  const [priceHistory, setPriceHistory] = useState<number[]>([4500])
+  const toast = useToast()
 
-  // Mock news data
-  const news = [
-    {
-      source: 'CryptoNews',
-      title: 'Market Analysis: BTC Shows Strong Momentum',
-      time: '10 mins ago',
-      sentiment: 'positive'
+  // Strategy parameters
+  const [strategyParams, setStrategyParams] = useState({
+    dca: {
+      interval: 5,
+      amount: tradeState.amount / 10,
+      lastBuy: 0,
     },
-    {
-      source: 'Trading View',
-      title: 'Technical Analysis: Support Level Holding',
-      time: '25 mins ago',
-      sentiment: 'neutral'
+    grid: {
+      upperBound: 4600,
+      lowerBound: 4400,
+      gridLines: 5,
+      gridSpacing: 50,
     },
-    {
-      source: 'Market Watch',
-      title: 'Whale Alert: Large BTC Transfer Detected',
-      time: '45 mins ago',
-      sentiment: 'neutral'
+    momentum: {
+      lookbackPeriod: 10,
+      threshold: 0.5,
+      trendStrength: 0,
     }
-  ]
+  })
 
-  // Mock AI predictions
-  const aiPredictions = [
-    {
-      type: 'SUPPORT',
-      level: 64500,
-      confidence: 85,
-      timeframe: '4h'
-    },
-    {
-      type: 'RESISTANCE',
-      level: 66800,
-      confidence: 78,
-      timeframe: '4h'
-    },
-    {
-      type: 'TREND',
-      direction: 'BULLISH',
-      confidence: 82,
-      timeframe: '1d'
-    }
-  ]
+  // Session timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (isActive) {
+        setSessionTime(prev => prev + 1)
+      }
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [isActive])
 
-  // Add this function to generate trade signals
-  const generateTradeSignal = () => {
-    if (!latestPrice?.data) return;
-    
-    const price = latestPrice.data;
-    const actions: ('BUY' | 'SELL' | 'HOLD')[] = ['BUY', 'SELL', 'HOLD'];
-    const reasons = {
-      BUY: ['Support level reached', 'Oversold condition', 'Bullish pattern formed'],
-      SELL: ['Resistance hit', 'Overbought condition', 'Bearish pattern formed'],
-      HOLD: ['Consolidating phase', 'Waiting for confirmation', 'No clear signal']
-    };
-    
-    // Simple random signal generation - replace with actual analysis logic
-    const action = actions[Math.floor(Math.random() * actions.length)];
-    const reason = reasons[action][Math.floor(Math.random() * reasons[action].length)];
-    
-    const newSignal: TradeSignal = {
-      timestamp: new Date(),
-      action,
-      price,
-      reason
-    };
-    
-    setLatestSignal(newSignal);
-    setTradeSignals(prev => [newSignal, ...prev].slice(0, 10));
-  };
+  // Format time as HH:MM:SS
+  const formatTime = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600)
+    const mins = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
 
-  // Add interval to update signals every minute
+  // Simulate price movement and trading
+  useEffect(() => {
+    if (!isActive) return
+
+    const priceInterval = setInterval(() => {
+      const volatilityFactor = (Math.random() * 0.004) + 0.001 // 0.1% to 0.5% volatility
+      setVolatility(volatilityFactor)
+      
+      const change = (Math.random() - 0.5) * volatilityFactor
+      const newPrice = currentPrice * (1 + change)
+      setCurrentPrice(newPrice)
+      setPriceHistory(prev => [...prev.slice(-100), newPrice])
+      
+      // Update market condition
+      if (priceHistory.length > 10) {
+        const recentPrices = priceHistory.slice(-10)
+        const avgPrice = recentPrices.reduce((a, b) => a + b, 0) / recentPrices.length
+        if (newPrice > avgPrice * 1.02) {
+          setMarketCondition('BULLISH')
+        } else if (newPrice < avgPrice * 0.98) {
+          setMarketCondition('BEARISH')
+        } else {
+          setMarketCondition('NEUTRAL')
+        }
+      }
+
+      // Execute trades based on strategy
+      if (Math.random() < 0.3) { // 30% chance of trade
+        const isBuy = Math.random() > 0.5
+        const amount = tradeState.amount * (Math.random() * 0.2 + 0.1) // 10-30% of total amount
+        const profitLoss = isBuy ? -amount * newPrice : amount * newPrice
+        
+        setTotalProfitLoss(prev => prev + profitLoss)
+        setRecentProfitLoss(profitLoss)
+
+        toast({
+          title: `${isBuy ? 'Buy' : 'Sell'} Order Executed`,
+          description: `${isBuy ? 'Bought' : 'Sold'} ${amount.toFixed(4)} ${tradeState.selectedToken} @ $${newPrice.toFixed(2)}`,
+          status: isBuy ? 'success' : 'warning',
+          duration: 3000,
+          isClosable: true,
+        })
+      }
+    }, 1000)
+
+    return () => clearInterval(priceInterval)
+  }, [isActive, currentPrice, priceHistory, tradeState])
+
+  // Execute trading strategies
   useInterval(() => {
-    generateTradeSignal();
-  }, 60000); // 60000ms = 1 minute
-
-  // Generate initial signal
-  useEffect(() => {
-    if (latestPrice) {
-      generateTradeSignal();
-    }
-  }, [latestPrice]);
-
-  useEffect(() => {
-    if (chartContainerRef.current) {
-      const chartOptions = {
-        layout: {
-          background: { color: 'transparent' },
-          textColor: '#d1d5db',
-        },
-        grid: {
-          vertLines: { color: '#2d374850' },
-          horzLines: { color: '#2d374850' },
-        },
-        width: chartContainerRef.current.clientWidth,
-        height: 400,
-        timeScale: {
-          timeVisible: true,
-          secondsVisible: false,
-        },
-        crosshair: {
-          mode: 1,
-        },
-      }
-
-      const newChart = createChart(chartContainerRef.current, chartOptions)
-      chart.current = newChart
-
-      const candleSeries = newChart.addCandlestickSeries()
-      candleSeries.applyOptions({
-        upColor: '#22c55e',
-        downColor: '#ef4444',
-        borderVisible: false,
-        wickUpColor: '#22c55e',
-        wickDownColor: '#ef4444',
+    if (!isActive || !currentPrice) return
+    
+    // Check for strategy change based on performance
+    if (consecutiveLosses >= 3 && !isChangingStrategy) {
+      setIsChangingStrategy(true)
+      const newStrategy = currentStrategy === 'DCA' ? 'Grid Trading' : 
+                         currentStrategy === 'Grid Trading' ? 'Momentum' : 'DCA'
+      setCurrentStrategy(newStrategy)
+      toast({
+        title: 'Strategy Change',
+        description: `Switching to ${newStrategy} due to market conditions`,
+        status: 'info',
+        duration: 3000,
+        isClosable: true,
       })
+      setTimeout(() => setIsChangingStrategy(false), 2000)
+    }
+    
+    switch (currentStrategy) {
+      case 'DCA':
+        executeDCAStrategy()
+        break
+      case 'Grid Trading':
+        executeGridStrategy()
+        break
+      case 'Momentum':
+        executeMomentumStrategy()
+        break
+    }
+  }, 2000)
 
-      if (klineData) {
-        const formattedData = klineData
-          .map((candle: CandleData, index: number) => ({
-            time: new Date(candle.time).getTime() / 1000 + index,
-            open: candle.open,
-            high: candle.high,
-            low: candle.low,
-            close: candle.close,
-          }))
-          .sort((a: CandleDataFormatted, b: CandleDataFormatted) => a.time - b.time);
+  const executeDCAStrategy = () => {
+    const { interval, amount, lastBuy } = strategyParams.dca
+    if (sessionTime - lastBuy >= interval) {
+      const buyAmount = amount * (1 + (Math.random() - 0.5) * 0.2) // Vary amount by ±10%
+      executeOrder('BUY', buyAmount, currentPrice, 'DCA scheduled buy')
+      setStrategyParams(prev => ({
+        ...prev,
+        dca: { ...prev.dca, lastBuy: sessionTime }
+      }))
+    }
+  }
 
-        candleSeries.setData(formattedData);
+  const executeGridStrategy = () => {
+    const { upperBound, lowerBound, gridSpacing } = strategyParams.grid
+    const gridLevels = []
+    for (let price = lowerBound; price <= upperBound; price += gridSpacing) {
+      gridLevels.push(price)
+    }
+
+    const closestLevel = gridLevels.reduce((prev, curr) => 
+      Math.abs(curr - currentPrice) < Math.abs(prev - currentPrice) ? curr : prev
+    )
+
+    if (currentPrice > closestLevel + gridSpacing * 0.5) {
+      executeOrder('SELL', tradeState.amount * 0.1, currentPrice, 'Grid level sell')
+    } else if (currentPrice < closestLevel - gridSpacing * 0.5) {
+      executeOrder('BUY', tradeState.amount * 0.1, currentPrice, 'Grid level buy')
+    }
+  }
+
+  const executeMomentumStrategy = () => {
+    const { lookbackPeriod, threshold } = strategyParams.momentum
+    if (priceHistory.length < lookbackPeriod) return
+
+    const prices = priceHistory.slice(-lookbackPeriod)
+    const returns = prices.map((price, i) => 
+      i === 0 ? 0 : (price - prices[i-1]) / prices[i-1]
+    )
+    const momentum = returns.reduce((a, b) => a + b, 0) / lookbackPeriod
+
+    setStrategyParams(prev => ({
+      ...prev,
+      momentum: { ...prev.momentum, trendStrength: momentum }
+    }))
+
+    if (momentum > threshold) {
+      executeOrder('BUY', tradeState.amount * 0.2, currentPrice, 'Strong upward momentum')
+    } else if (momentum < -threshold) {
+      executeOrder('SELL', tradeState.amount * 0.2, currentPrice, 'Strong downward momentum')
+    }
+  }
+
+  const executeOrder = (type: 'BUY' | 'SELL', amount: number, price: number, reason: string) => {
+    const fees = amount * price * 0.001 // 0.1% fee
+    const newTrade = {
+      type,
+      amount,
+      price,
+      timestamp: new Date(),
+      fees,
+      reason,
+    }
+
+    setTradeSignals(prev => [...prev, newTrade])
+    const profitLoss = type === 'SELL' ? amount * price * 0.99 : -amount * price * 1.01
+    setTotalProfitLoss(prev => prev + profitLoss)
+    setRecentProfitLoss(profitLoss)
+
+    if (profitLoss < 0) {
+      setConsecutiveLosses(prev => prev + 1)
+    } else {
+      setConsecutiveLosses(0)
+    }
+
+    toast({
+      title: `${type} Order Executed`,
+      description: `${type === 'BUY' ? 'Bought' : 'Sold'} ${amount.toFixed(4)} ${tradeState.selectedToken} @ $${price.toFixed(2)}`,
+      status: type === 'BUY' ? 'success' : 'warning',
+      duration: 3000,
+      isClosable: true,
+    })
+  }
+
+  // Initialize and update chart
+  useEffect(() => {
+    if (!chartContainerRef.current) return
+
+    const chartOptions: DeepPartial<ChartOptions> = {
+      layout: {
+        background: { color: 'rgba(17, 24, 39, 0.5)' },
+        textColor: '#d1d5db',
+      },
+      grid: {
+        vertLines: { color: 'rgba(255, 255, 255, 0.1)' },
+        horzLines: { color: 'rgba(255, 255, 255, 0.1)' },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+      },
+      timeScale: {
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        timeVisible: true,
+        secondsVisible: true,
+      },
+    }
+
+    chart.current = createChart(chartContainerRef.current, chartOptions)
+    const candleSeries = chart.current.addCandlestickSeries({
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+      borderVisible: false,
+      wickUpColor: '#22c55e',
+      wickDownColor: '#ef4444',
+    })
+
+    // Add strategy markers
+    const markers: any[] = []
+    if (tradeSignals.length > 0) {
+      tradeSignals.forEach((signal) => {
+        markers.push({
+          time: signal.timestamp.getTime() / 1000 as Time,
+          position: signal.type === 'BUY' ? 'belowBar' : 'aboveBar',
+          color: signal.type === 'BUY' ? '#22c55e' : '#ef4444',
+          shape: signal.type === 'BUY' ? 'arrowUp' : 'arrowDown',
+          text: `${signal.type} - ${currentStrategy}`,
+        })
+      })
+      candleSeries.setMarkers(markers)
+    }
+
+    // Add price data
+    const baseTime = Math.floor(new Date().getTime() / 1000)
+    const priceData: CandlestickData[] = priceHistory.map((price, index) => ({
+      time: (baseTime - (priceHistory.length - index)) as Time,
+      open: price * 0.998,
+      high: price * 1.002,
+      low: price * 0.997,
+      close: price,
+    }))
+    candleSeries.setData(priceData)
+
+    // Add strategy-specific indicators
+    if (currentStrategy === 'DCA') {
+      const dcaLine = chart.current.addLineSeries({
+        color: '#3b82f6',
+        lineWidth: 2,
+        title: 'DCA Level',
+      })
+      dcaLine.setData(priceHistory.map((_, index) => ({
+        time: (baseTime - (priceHistory.length - index)) as Time,
+        value: strategyParams.dca.lastBuy,
+      })))
+    } else if (currentStrategy === 'Grid Trading') {
+      const { upperBound, lowerBound, gridSpacing } = strategyParams.grid
+      for (let price = lowerBound; price <= upperBound; price += gridSpacing) {
+        const gridLine = chart.current.addLineSeries({
+          color: 'rgba(59, 130, 246, 0.5)',
+          lineWidth: 1,
+          lineStyle: 2,
+          title: `Grid ${price.toFixed(2)}`,
+        })
+        gridLine.setData(priceHistory.map((_, index) => ({
+          time: (baseTime - (priceHistory.length - index)) as Time,
+          value: price,
+        })))
       }
+    } else if (currentStrategy === 'Momentum') {
+      const momentumLine = chart.current.addLineSeries({
+        color: '#8b5cf6',
+        lineWidth: 2,
+        title: 'Momentum',
+      })
+      momentumLine.setData(priceHistory.map((price, index) => ({
+        time: (baseTime - (priceHistory.length - index)) as Time,
+        value: price * (1 + strategyParams.momentum.trendStrength),
+      })))
+    }
 
-      const handleResize = () => {
-        if (chart.current && chartContainerRef.current) {
-          chart.current.applyOptions({
-            width: chartContainerRef.current.clientWidth,
-          })
-        }
-      }
-
-      window.addEventListener('resize', handleResize)
-
-      return () => {
-        window.removeEventListener('resize', handleResize)
-        if (chart.current) {
-          chart.current.remove()
-        }
+    // Resize handler
+    const handleResize = () => {
+      if (chart.current && chartContainerRef.current) {
+        chart.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight,
+        })
       }
     }
-  }, [klineData])
+
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (chart.current) {
+        chart.current.remove()
+      }
+    }
+  }, [tradeSignals, currentStrategy, priceHistory, strategyParams])
 
   return (
-    <Box p={6} bg="gray.800" rounded="xl" shadow="xl">
-      <Grid templateColumns="2fr 1fr" gap={6}>
-        {/* Left Column - Chart and Trading Activity */}
+    <Box h="80vh" p={4}>
+      <Grid templateColumns="1fr 300px" gap={4} h="100%">
         <GridItem>
-          <VStack spacing={6} align="stretch">
-            {/* Chart Header */}
-            <Flex justify="space-between" align="center">
-              <Box>
-                <Heading size="md">
-                  {tradeState.selectedToken}/USD
-                  {latestPrice && (
-                    <Text as="span" color="gray.400" ml={2} fontSize="lg">
-                      ${latestPrice.toLocaleString()}
-                    </Text>
-                  )}
-                </Heading>
-                <Text color="gray.400" fontSize="sm">Live Price Chart</Text>
-              </Box>
-              <HStack spacing={4}>
-                <ButtonGroup size="sm" isAttached variant="outline">
-                  <Button onClick={() => setTimeframe('15m')} isActive={timeframe === '15m'}>15m</Button>
-                  <Button onClick={() => setTimeframe('1h')} isActive={timeframe === '1h'}>1h</Button>
-                  <Button onClick={() => setTimeframe('4h')} isActive={timeframe === '4h'}>4h</Button>
-                  <Button onClick={() => setTimeframe('1d')} isActive={timeframe === '1d'}>1d</Button>
-                </ButtonGroup>
+          <VStack h="100%" spacing={4}>
+            {/* Session Info */}
+            <HStack w="100%" justify="space-between" bg="whiteAlpha.100" p={3} rounded="lg">
+              <HStack>
+                <Icon as={Clock} />
+                <Text>Session Time: {formatTime(sessionTime)}</Text>
               </HStack>
-            </Flex>
+              <Badge
+                colorScheme={
+                  marketCondition === 'BULLISH' ? 'green' :
+                  marketCondition === 'BEARISH' ? 'red' : 'gray'
+                }
+                display="flex"
+                alignItems="center"
+                gap={1}
+              >
+                <Icon as={marketCondition === 'BULLISH' ? TrendingUp : 
+                         marketCondition === 'BEARISH' ? TrendingDown : Activity} size={14} />
+                {marketCondition}
+              </Badge>
+            </HStack>
 
-            {/* TradingView Chart */}
-            <Box ref={chartContainerRef} h="400px" position="relative">
-              {isLoadingKlines && (
-                <Flex
-                  position="absolute"
-                  top={0}
-                  left={0}
-                  right={0}
-                  bottom={0}
-                  align="center"
-                  justify="center"
-                  bg="blackAlpha.50"
-                  backdropFilter="blur(2px)"
-                >
-                  <Text>Loading chart data...</Text>
-                </Flex>
-              )}
-            </Box>
-
-            {/* AI Predictions */}
-            <Box>
-              <Heading size="sm" mb={4}>
-                <Flex align="center" gap={2}>
-                  <Icon as={Brain} />
-                  <Text>AI Predictions</Text>
-                </Flex>
-              </Heading>
-              <Grid templateColumns="repeat(3, 1fr)" gap={4}>
-                {aiPredictions.map((prediction, index) => (
-                  <Box
-                    key={index}
-                    p={4}
-                    bg="whiteAlpha.50"
-                    rounded="lg"
-                    borderWidth="1px"
-                    borderColor="whiteAlpha.100"
-                  >
-                    <Flex justify="space-between" align="center" mb={2}>
-                      <Text color="gray.400">{prediction.type}</Text>
-                      <Badge colorScheme={prediction.confidence > 80 ? 'green' : 'yellow'}>
-                        {prediction.confidence}%
-                      </Badge>
-                    </Flex>
-                    <Text fontSize="lg" fontWeight="bold">
-                      {prediction.type === 'TREND' ? prediction.direction : `$${prediction.level?.toLocaleString()}`}
-                    </Text>
-                    <Text fontSize="sm" color="gray.400">{prediction.timeframe} timeframe</Text>
-                  </Box>
-                ))}
-              </Grid>
-            </Box>
-
-            {/* Trading Activity */}
-            <Box>
-              <Heading size="sm" mb={4}>
-                <Flex align="center" gap={2}>
-                  <Icon as={Activity} />
-                  <Text>Recent Trading Activity</Text>
-                </Flex>
-              </Heading>
-              <Table variant="simple" size="sm">
-                <Thead>
-                  <Tr>
-                    <Th>Action</Th>
-                    <Th>Reason</Th>
-                    <Th>Price</Th>
-                    <Th>Amount</Th>
-                    <Th>Time</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {tradeState.trades.map((trade, index) => (
-                    <Tr key={index}>
-                      <Td>
-                        <Badge colorScheme={trade.type === 'BUY' ? 'green' : 'red'}>
-                          {trade.type}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <Flex align="center" gap={2}>
-                          <Icon 
-                            as={trade.type === 'BUY' ? TrendingUp : TrendingDown} 
-                            color={trade.type === 'BUY' ? 'green.400' : 'red.400'}
-                            size={14}
-                          />
-                          <Text fontSize="sm">
-                            {trade.type === 'BUY' ? 'Support level reached' : 'Target price hit'}
-                          </Text>
-                        </Flex>
-                      </Td>
-                      <Td>${trade.price.toLocaleString()}</Td>
-                      <Td>${trade.amount.toLocaleString()}</Td>
-                      <Td>{trade.timestamp.toLocaleTimeString()}</Td>
-                    </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </Box>
-
-            {/* Add Trade Recommendations Section */}
-            <Box>
-              <Heading size="sm" mb={4}>
-                <Flex align="center" gap={2}>
-                  <Icon as={Target} />
-                  <Text>Trade Recommendations</Text>
-                </Flex>
-              </Heading>
-              <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                <Box bg="whiteAlpha.50" p={4} rounded="lg" borderWidth="1px" borderColor="whiteAlpha.100">
-                  <Heading size="sm" mb={3}>Current Signal</Heading>
-                  {latestSignal && (
-                    <VStack align="start" spacing={2}>
-                      <Badge
-                        colorScheme={
-                          latestSignal.action === 'BUY' ? 'green' :
-                          latestSignal.action === 'SELL' ? 'red' : 'yellow'
-                        }
-                        fontSize="lg"
-                        px={3}
-                        py={1}
-                      >
-                        {latestSignal.action}
-                      </Badge>
-                      <Text fontSize="sm" color="gray.400">
-                        Price: ${latestSignal.price?.toLocaleString()}
-                      </Text>
-                      <Text fontSize="sm">{latestSignal.reason}</Text>
-                      <Text fontSize="xs" color="gray.500">
-                        {latestSignal.timestamp.toLocaleTimeString()}
-                      </Text>
-                    </VStack>
-                  )}
-                </Box>
-                <Box bg="whiteAlpha.50" p={4} rounded="lg" borderWidth="1px" borderColor="whiteAlpha.100">
-                  <Heading size="sm" mb={3}>Signal History</Heading>
-                  <VStack align="stretch" spacing={2} maxH="200px" overflowY="auto">
-                    {tradeSignals.map((signal, index) => (
-                      <Flex
-                        key={index}
-                        justify="space-between"
-                        align="center"
-                        bg="whiteAlpha.50"
-                        p={2}
-                        rounded="md"
-                      >
-                        <HStack>
-                          <Badge
-                            colorScheme={
-                              signal.action === 'BUY' ? 'green' :
-                              signal.action === 'SELL' ? 'red' : 'yellow'
-                            }
-                          >
-                            {signal.action}
-                          </Badge>
-                          <Text fontSize="xs">${signal.price?.toLocaleString()}</Text>
-                        </HStack>
-                        <Text fontSize="xs" color="gray.500">
-                          {signal.timestamp.toLocaleTimeString()}
-                        </Text>
-                      </Flex>
-                    ))}
-                  </VStack>
-                </Box>
-              </Grid>
-            </Box>
+            {/* Chart */}
+            <Box w="100%" h="calc(100% - 100px)" ref={chartContainerRef} />
           </VStack>
         </GridItem>
 
-        {/* Right Column - News, Performance, and Agent Status */}
+        {/* Trading Info */}
         <GridItem>
-          <VStack spacing={6} align="stretch">
+          <VStack spacing={4} h="100%" bg="whiteAlpha.50" p={4} rounded="lg" overflowY="auto">
+            <Heading size="md">Trading Dashboard</Heading>
+            
+            {/* Current Price */}
+            <Stat>
+              <StatLabel>Current Price</StatLabel>
+              <StatNumber>${currentPrice.toFixed(2)}</StatNumber>
+              <StatHelpText>
+                <StatArrow type={recentProfitLoss >= 0 ? 'increase' : 'decrease'} />
+                {(volatility * 100).toFixed(2)}% Volatility
+              </StatHelpText>
+            </Stat>
+
+            {/* Total P/L */}
+            <Stat>
+              <StatLabel>Total Profit/Loss</StatLabel>
+              <StatNumber color={totalProfitLoss >= 0 ? 'green.400' : 'red.400'}>
+                ${Math.abs(totalProfitLoss).toFixed(2)}
+              </StatNumber>
+              <StatHelpText>
+                <StatArrow type={totalProfitLoss >= 0 ? 'increase' : 'decrease'} />
+                {((totalProfitLoss / (tradeState.amount * currentPrice)) * 100).toFixed(2)}%
+              </StatHelpText>
+            </Stat>
+
             {/* Strategy Info */}
-            <Box p={4} bg="whiteAlpha.50" rounded="lg">
-              <HStack spacing={4} mb={4}>
-                <Badge colorScheme="blue" fontSize="md" px={3} py={1}>
-                  {tradeState.strategy}
-                </Badge>
-                <Badge 
-                  colorScheme={
-                    tradeState.riskLevel === 'HIGH' ? 'red' : 
-                    tradeState.riskLevel === 'MEDIUM' ? 'yellow' : 'green'
-                  } 
-                  px={3} 
-                  py={1}
-                >
-                  {tradeState.riskLevel} Risk
-                </Badge>
+            <VStack align="stretch" w="100%" spacing={3}>
+              <Heading size="sm">Active Strategy</Heading>
+              <HStack bg="whiteAlpha.100" p={3} rounded="lg">
+                <Icon as={
+                  currentStrategy === 'DCA' ? Target :
+                  currentStrategy === 'Grid Trading' ? BarChart2 : Brain
+                } />
+                <Text>{currentStrategy}</Text>
               </HStack>
-              <Text color="gray.400" fontSize="sm">
-                Active strategy with automated trading based on technical analysis and market sentiment
-              </Text>
-            </Box>
+            </VStack>
 
-            {/* Performance Metrics */}
-            <Box>
-              <Heading size="sm" mb={4}>
-                <Flex align="center" gap={2}>
-                  <Icon as={BarChart2} />
-                  <Text>Performance</Text>
-                </Flex>
-              </Heading>
-              <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                <Stat bg="whiteAlpha.50" p={3} rounded="lg">
-                  <StatLabel>Total Profit/Loss</StatLabel>
-                  <StatNumber color={tradeState.performance.totalProfit >= 0 ? 'green.400' : 'red.400'}>
-                    ${Math.abs(tradeState.performance.totalProfit).toLocaleString()}
-                  </StatNumber>
-                  <StatHelpText>
-                    <StatArrow type={tradeState.performance.totalProfit >= 0 ? 'increase' : 'decrease'} />
-                    {tradeState.performance.roi}%
-                  </StatHelpText>
-                </Stat>
-                <Stat bg="whiteAlpha.50" p={3} rounded="lg">
-                  <StatLabel>Average Entry</StatLabel>
-                  <StatNumber>${tradeState.performance.averageEntry.toLocaleString()}</StatNumber>
-                </Stat>
+            {/* Manual Trading Controls */}
+            <VStack align="stretch" w="100%" spacing={3}>
+              <Heading size="sm">Manual Trading</Heading>
+              <Grid templateColumns="repeat(2, 1fr)" gap={2}>
+                <Button
+                  colorScheme="green"
+                  leftIcon={<Icon as={TrendingUp} />}
+                  onClick={() => executeOrder('BUY', tradeState.amount * 0.1, currentPrice, 'Manual buy')}
+                >
+                  Buy
+                </Button>
+                <Button
+                  colorScheme="red"
+                  leftIcon={<Icon as={TrendingDown} />}
+                  onClick={() => executeOrder('SELL', tradeState.amount * 0.1, currentPrice, 'Manual sell')}
+                >
+                  Sell
+                </Button>
               </Grid>
-            </Box>
+            </VStack>
 
-            {/* News Feed */}
-            <Box>
-              <Heading size="sm" mb={4}>
-                <Flex align="center" gap={2}>
-                  <Icon as={MessageCircle} />
-                  <Text>Latest News & Analysis</Text>
-                </Flex>
-              </Heading>
-              <VStack spacing={3} align="stretch">
-                {news.map((item, index) => (
+            {/* Recent Trades */}
+            <VStack align="stretch" w="100%" spacing={3}>
+              <Heading size="sm">Recent Trades</Heading>
+              <VStack 
+                align="stretch" 
+                spacing={2} 
+                maxH="300px" 
+                overflowY="auto"
+                css={{
+                  '&::-webkit-scrollbar': {
+                    width: '4px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    width: '6px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    borderRadius: '24px',
+                  },
+                }}
+              >
+                {tradeSignals.slice().reverse().map((trade, index) => (
                   <Box
                     key={index}
                     p={3}
-                    bg="whiteAlpha.50"
+                    bg="whiteAlpha.100"
                     rounded="lg"
-                    borderWidth="1px"
-                    borderColor="whiteAlpha.100"
+                    borderLeft="4px solid"
+                    borderColor={trade.type === 'BUY' ? 'green.400' : 'red.400'}
                   >
-                    <Flex justify="space-between" align="start" mb={1}>
-                      <Text fontSize="sm" fontWeight="medium">{item.source}</Text>
-                      <Badge
-                        colorScheme={
-                          item.sentiment === 'positive' ? 'green' :
-                          item.sentiment === 'negative' ? 'red' : 'gray'
-                        }
-                        variant="subtle"
-                      >
-                        {item.sentiment}
-                      </Badge>
+                    <Flex justify="space-between" align="start">
+                      <VStack align="start" spacing={1}>
+                        <Badge colorScheme={trade.type === 'BUY' ? 'green' : 'red'}>
+                          {trade.type}
+                        </Badge>
+                        <Text fontSize="sm" color="gray.300">{trade.reason}</Text>
+                      </VStack>
+                      <VStack align="end" spacing={1}>
+                        <Text fontWeight="bold">
+                          {trade.amount.toFixed(4)} {tradeState.selectedToken}
+                        </Text>
+                        <Text fontSize="sm" color="gray.300">
+                          @ ${trade.price.toFixed(2)}
+                        </Text>
+                      </VStack>
                     </Flex>
-                    <Text fontSize="sm" mb={1}>{item.title}</Text>
-                    <Text fontSize="xs" color="gray.400">{item.time}</Text>
+                    <Flex justify="space-between" mt={2}>
+                      <Text fontSize="xs" color="gray.400">
+                        Fee: ${trade.fees.toFixed(2)}
+                      </Text>
+                      <Text fontSize="xs" color="gray.400">
+                        {trade.timestamp.toLocaleTimeString()}
+                      </Text>
+                    </Flex>
                   </Box>
                 ))}
               </VStack>
-            </Box>
+            </VStack>
 
-            {/* Agent Status */}
-            <Box>
-              <Heading size="sm" mb={4}>
-                <Flex align="center" gap={2}>
-                  <Icon as={Brain} />
-                  <Text>AI Agent Status</Text>
-                </Flex>
-              </Heading>
-              <VStack spacing={3} align="stretch">
-                <HStack justify="space-between" bg="whiteAlpha.50" p={3} rounded="lg">
-                  <Flex align="center" gap={2}>
-                    <Icon as={Activity} color="green.400" />
-                    <Text>Agent Status</Text>
-                  </Flex>
-                  <Badge colorScheme="green">Active</Badge>
-                </HStack>
-                <HStack justify="space-between" bg="whiteAlpha.50" p={3} rounded="lg">
-                  <Flex align="center" gap={2}>
-                    <Icon as={Target} color="blue.400" />
-                    <Text>Next Target</Text>
-                  </Flex>
-                  <Text>$67,500</Text>
-                </HStack>
-                <HStack justify="space-between" bg="whiteAlpha.50" p={3} rounded="lg">
-                  <Flex align="center" gap={2}>
-                    <Icon as={AlertCircle} color="yellow.400" />
-                    <Text>Risk Level</Text>
-                  </Flex>
-                  <Badge colorScheme="yellow">Medium</Badge>
-                </HStack>
-                <HStack justify="space-between" bg="whiteAlpha.50" p={3} rounded="lg">
-                  <Flex align="center" gap={2}>
-                    <Icon as={DollarSign} color="green.400" />
-                    <Text>Available Balance</Text>
-                  </Flex>
-                  <Text>${(tradeState.amount * 0.7).toLocaleString()}</Text>
-                </HStack>
-              </VStack>
-            </Box>
+            {/* Strategy Parameters */}
+            <VStack align="stretch" w="100%" spacing={3}>
+              <Heading size="sm">Strategy Parameters</Heading>
+              <Box bg="whiteAlpha.100" p={3} rounded="lg">
+                {currentStrategy === 'DCA' && (
+                  <VStack align="stretch" spacing={2}>
+                    <Text fontSize="sm">Interval: {strategyParams.dca.interval}s</Text>
+                    <Text fontSize="sm">Next Buy: {strategyParams.dca.interval - (sessionTime - strategyParams.dca.lastBuy)}s</Text>
+                    <Text fontSize="sm">Amount: {strategyParams.dca.amount.toFixed(4)} {tradeState.selectedToken}</Text>
+                  </VStack>
+                )}
+                {currentStrategy === 'Grid Trading' && (
+                  <VStack align="stretch" spacing={2}>
+                    <Text fontSize="sm">Upper: ${strategyParams.grid.upperBound.toFixed(2)}</Text>
+                    <Text fontSize="sm">Lower: ${strategyParams.grid.lowerBound.toFixed(2)}</Text>
+                    <Text fontSize="sm">Grid Size: ${strategyParams.grid.gridSpacing.toFixed(2)}</Text>
+                  </VStack>
+                )}
+                {currentStrategy === 'Momentum' && (
+                  <VStack align="stretch" spacing={2}>
+                    <Text fontSize="sm">Lookback: {strategyParams.momentum.lookbackPeriod}s</Text>
+                    <Text fontSize="sm">Strength: {(strategyParams.momentum.trendStrength * 100).toFixed(2)}%</Text>
+                    <Text fontSize="sm">Threshold: {(strategyParams.momentum.threshold * 100).toFixed(2)}%</Text>
+                  </VStack>
+                )}
+              </Box>
+            </VStack>
           </VStack>
         </GridItem>
       </Grid>
@@ -583,4 +596,4 @@ const TradingView = ({ tradeState }: TradingViewProps) => {
   )
 }
 
-export default TradingView 
+export default TradingView

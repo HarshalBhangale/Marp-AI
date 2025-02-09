@@ -47,6 +47,8 @@ import {
   Link,
 } from '@chakra-ui/react'
 import TradingView from './TradingView'
+import { useAccount, useContract } from '@starknet-react/core'
+import { Contract, uint256, Account } from 'starknet'
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('en-US', {
@@ -263,6 +265,8 @@ const TeamView = ({ owners }: { owners: typeof MARP_KNOWLEDGE.owners }) => (
   </Grid>
 );
 
+const TRADING_CONTRACT = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d'
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -282,6 +286,24 @@ const ChatInterface = () => {
     }
   })
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const { address } = useAccount()
+  const { contract } = useContract({
+    address: TRADING_CONTRACT,
+    abi: [
+      {
+        name: 'deposit',
+        type: 'function',
+        inputs: [
+          {
+            name: 'amount',
+            type: 'uint256'
+          }
+        ],
+        outputs: [],
+        state_mutability: 'external'
+      }
+    ]
+  })
 
   const bgGradient = 'linear(to-b, gray.900, gray.800)'
   const borderColor = 'whiteAlpha.100'
@@ -312,9 +334,9 @@ const ChatInterface = () => {
       id: messages.length + 2,
       content: `Welcome to Marp Trades! Let's set up your trading bot.
 
-First, how much ETH would you like to deposit to start trading? (minimum 0.01 ETH)
+First, how much STRK would you like to deposit to start trading? (minimum 0.01 STRK)
 
-Example: Type "0.05" to deposit 0.05 ETH`,
+Example: Type "0.05" to deposit 0.05 STRK`,
       sender: 'bot',
       timestamp: new Date(),
     };
@@ -325,7 +347,7 @@ Example: Type "0.05" to deposit 0.05 ETH`,
     if (amount < 0.01) {
       const errorMessage: Message = {
         id: messages.length + 2,
-        content: `The minimum deposit amount is 0.01 ETH. Please enter a larger amount.`,
+        content: `The minimum deposit amount is 0.01 STRK. Please enter a larger amount.`,
         sender: 'bot',
         timestamp: new Date(),
       };
@@ -335,9 +357,9 @@ Example: Type "0.05" to deposit 0.05 ETH`,
 
     setTradeState(prev => ({ ...prev, amount }));
     
-    const depositMessage: Message = {
-      id: messages.length + 2,
-      content: `Great! You're depositing ${amount} ETH.
+    const successMessage: Message = {
+      id: messages.length + 4,
+      content: `🎉 ${amount} STRK ready for trading!
 
 Select a trading pair:
 
@@ -346,21 +368,21 @@ Select a trading pair:
    📊 24h Volume: $1.2B
    📈 24h Change: +2.5%
    
-2. ETH-USDC
-   💰 Price: $3,456
-   📊 24h Volume: $800M
-   📈 24h Change: +1.8%
-   
-3. STRK-USDC
+2. STRK-USDC
    💰 Price: $4.32
    📊 24h Volume: $50M
    📈 24h Change: +5.2%
+   
+3. ETH-USDC
+   💰 Price: $3,456
+   📊 24h Volume: $800M
+   📈 24h Change: +1.8%
 
 Type 1, 2, or 3 to select your pair.`,
       sender: 'bot',
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, depositMessage]);
+    setMessages(prev => [...prev, successMessage]);
   };
 
   const handleTokenSelection = (token: string) => {
@@ -421,7 +443,7 @@ Type 1, 2, or 3 to select your strategy.`,
       id: messages.length + 2,
       content: `🚀 Trading bot initialized!
 
-✅ Deposit: ${tradeState.amount} ETH
+✅ Deposit: ${tradeState.amount} STRK
 ✅ Pair: ${tradeState.selectedToken}-USDC
 ✅ Strategy: ${strategy}
 ✅ Risk Level: ${riskLevel}
@@ -430,47 +452,14 @@ Type 1, 2, or 3 to select your strategy.`,
 ⚡ Setting up ${strategy}...
 📊 Loading market data...
 
-Opening your live trading dashboard...`,
+Trading dashboard is now open! You can monitor your trades and performance in real-time.`,
       sender: 'bot',
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, simulationMessage]);
 
-    // Open trading view modal and start simulation immediately
+    // Open trading view modal immediately
     onOpen();
-    startTradeSimulation(strategyNumber);
-  };
-
-  const startTradeSimulation = (strategyNumber: number) => {
-    let tradeInterval = setInterval(() => {
-      const randomProfit = (Math.random() * 2 - 0.5) * (strategyNumber * 2);
-      const newTrade: TradingActivity = {
-        type: randomProfit > 0 ? 'BUY' : 'SELL',
-        price: 65000 + (Math.random() * 1000 - 500),
-        amount: Math.random() * 100,
-        timestamp: new Date(),
-        fees: Math.random() * 0.1,
-      };
-
-      setTradeState(prev => {
-        const newTrades = [...prev.trades, newTrade].slice(-10);
-        const totalProfit = newTrades.reduce((sum, trade) => 
-          sum + (trade.type === 'BUY' ? trade.amount : -trade.amount), 0);
-        
-        return {
-          ...prev,
-          trades: newTrades,
-          performance: {
-            averageEntry: 65000 + (Math.random() * 100 - 50),
-            totalProfit,
-            totalFees: prev.performance.totalFees + newTrade.fees,
-            roi: (totalProfit / (prev.amount || 1)) * 100,
-          }
-        };
-      });
-    }, 5000);
-
-    return () => clearInterval(tradeInterval);
   };
 
   const handleRiskLevel = (risk: string) => {
@@ -491,7 +480,7 @@ Opening your live trading dashboard...`,
         id: messages.length + 2,
         content: `🔄 Initiating deposit to Starknet trading contract...
 
-1. Approving ETH spend...
+1. Approving STRK spend...
 2. Waiting for confirmation...`,
         sender: 'bot',
         timestamp: new Date(),
@@ -507,7 +496,7 @@ Opening your live trading dashboard...`,
 ✅ Funds received
 
 Your trading bot is now being initialized with:
-• Deposit: ${amount} ETH
+• Deposit: ${amount} STRK
 • Trading Pair: ${tradeState.selectedToken}-USDC
 • Strategy: ${tradeState.strategy}
 
@@ -666,7 +655,7 @@ Error details: ${error?.message || 'Unknown error'}`,
       
       if (tradeState.amount && !tradeState.selectedToken) {
         // Handle token selection
-        const tokenPairs = ['BTC', 'ETH', 'STRK'];
+        const tokenPairs = ['BTC', 'STRK', 'ETH'];
         handleTokenSelection(tokenPairs[selection - 1]);
         return;
       } else if (tradeState.amount && tradeState.selectedToken && !tradeState.strategy) {
