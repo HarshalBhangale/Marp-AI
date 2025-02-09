@@ -90,7 +90,7 @@ def initialize_agent():
     config = {"configurable": {"thread_id": "CDP Agentkit Chatbot Example!"}}
 
     # Read script files
-    script_files = [f"script{i}.txt" for i in range(1, 8)] + ["Tweets.txt"]
+    script_files = [f"AI/agents/script{i}.txt" for i in range(1, 8)] + ["AI/agents/Tweets.txt"]
     scripts_content = {file: read_script_file(file) for file in script_files}
 
     # Create ReAct Agent
