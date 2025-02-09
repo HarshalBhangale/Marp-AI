@@ -9,7 +9,7 @@ export function Navbar() {
 
   return (
     <nav className="fixed top-0 w-full border-b border-yellow-600/20 bg-white/80 backdrop-blur-sm z-50">
-      <div className="container mx-auto px-4">
+      <div className="px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-left">
@@ -18,7 +18,6 @@ export function Navbar() {
               alt="Logo"
               width={140}
               height={40}
-              className="mr-2"
             />
             
           </div>

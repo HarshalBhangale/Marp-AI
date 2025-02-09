@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 "use client"
 
 import { useState } from "react"
@@ -7,9 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Send, Mic } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { SwapComponent } from "./gen_components/swap"
-import { ChartComponent } from "./gen_components/chart"
-import { ConvAI } from "./conv-ai"
-import { RemainingCredits } from "./remaining-credits"
+
+
 
 interface ChatMessage {
   type: 'user' | 'ai'
@@ -49,12 +49,7 @@ export function ChatWindow() {
         content: <SwapComponent userPrompt={message} />,
         timestamp: currentTime
       }
-    } else if (message.toLowerCase().includes('chart')) {
-      aiResponse = {
-        type: 'ai',
-        content: <ChartComponent userPrompt={message} />,
-        timestamp: currentTime
-      }
+    
     } else {
       aiResponse = {
         type: 'ai',
@@ -81,9 +76,9 @@ export function ChatWindow() {
             <li>Price charts (say "show me eth chart")</li>
             <li>Market information and more</li>
           </ul>
-          <ConvAI />
+
           <div className="mt-2">
-            <RemainingCredits />
+
           </div>
         </div>
       ),
